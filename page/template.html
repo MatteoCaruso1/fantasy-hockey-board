@@ -1,0 +1,1006 @@
+<title>My Team Weekly Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column read like a coach's whiteboard. Verdict first (stud alarm, moves), then the week grid, then the deep wire. */
+:root {
+  --ice: #F2F5F9; --sheet: #FFFFFF; --ink: #0E1B2B; --muted: #5A6A7D; --line: #D5DDE7;
+  --blue: #1F4FA3; --blue-soft: #E5EDF9; --red: #C8102E; --red-soft: #FBE5E8; --board-up: #7FE0AE;
+  --good: #1B7A52; --good-soft: #E2F3EA; --warn: #A86200; --warn-soft: #FBF0DC;
+  --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ice: #0A1119; --sheet: #111B27; --ink: #E5ECF4; --muted: #91A2B5; --line: #233244;
+  --blue: #79A4F0; --blue-soft: #15243A; --red: #FF5C70; --red-soft: #3A1620; --board-up: #11733F;
+  --good: #4CC48A; --good-soft: #10291E; --warn: #E7A640; --warn-soft: #2D2210; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --ice: #0A1119; --sheet: #111B27; --ink: #E5ECF4; --muted: #91A2B5; --line: #233244;
+  --blue: #79A4F0; --blue-soft: #15243A; --red: #FF5C70; --red-soft: #3A1620; --board-up: #11733F;
+  --good: #4CC48A; --good-soft: #10291E; --warn: #E7A640; --warn-soft: #2D2210; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; } /* tabs and buttons set display, which would otherwise beat hidden */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { background: var(--ice); color: var(--ink); font: 400 15px/1.5 var(--body); padding-inline: 16px; padding-block: 20px 56px; }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 28px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: 0.01em; margin: 0; text-wrap: balance; line-height: 1.05; }
+h2 { font-size: 26px; text-transform: uppercase; }
+h3 { font-size: 20px; }
+p { margin: 0; }
+.num, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.eyebrow { font: 600 12px/1 var(--body); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 14px; min-width: 0; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; border-bottom: 2px solid var(--ink); padding-bottom: 6px; }
+.sec-head p { color: var(--muted); font-size: 14px; max-width: 62ch; }
+
+/* Header: scoreboard */
+header { display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: end; }
+header h1 { font-size: clamp(40px, 7vw, 68px); text-transform: uppercase; }
+header .sub { color: var(--muted); margin-top: 6px; }
+.board { display: grid; grid-template-columns: repeat(3, auto); gap: 0; background: var(--ink); color: var(--ice); border-radius: 6px; overflow: hidden; }
+.board > div { padding: 10px 16px; display: grid; gap: 2px; }
+.board > div + div { border-left: 1px solid color-mix(in srgb, var(--ice) 18%, transparent); }
+.board .eyebrow { color: color-mix(in srgb, var(--ice) 65%, transparent); }
+.board b { font: 600 30px/1 var(--mono); }
+.board .up { color: var(--board-up); }
+@media (max-width: 720px) { header { grid-template-columns: 1fr; } .board { grid-template-columns: repeat(3, 1fr); } .board b { font-size: 22px; } }
+
+/* Goal-light alarm for studs on the wire */
+.alarm { border-radius: 8px; padding: 16px 18px; display: grid; gap: 12px; }
+.alarm.on { background: var(--red); color: #fff; }
+.alarm.on .eyebrow { color: rgba(255,255,255,0.8); }
+.alarm.off { background: var(--sheet); border: 1px solid var(--line); }
+.alarm-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.alarm-item { background: rgba(255,255,255,0.14); border-radius: 6px; padding: 8px 12px; min-width: 0; }
+.alarm.off .alarm-item { background: var(--blue-soft); }
+
+/* Move sequence */
+.moves { display: grid; gap: 10px; counter-reset: mv; }
+.move { display: grid; grid-template-columns: 64px minmax(0, 1fr) minmax(150px, 240px); grid-template-areas: 'when swap gain' '. alts alts'; gap: 14px; align-items: center; background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; }
+.move > .when { grid-area: when; } .move > .swap { grid-area: swap; } .move > .gain { grid-area: gain; } .move > .alts { grid-area: alts; margin-top: 0; }
+.move .when { font: 700 22px/1 var(--display); text-transform: uppercase; text-align: center; }
+.move .when small { display: block; font: 500 11px/1.3 var(--mono); color: var(--muted); letter-spacing: 0; text-transform: none; }
+.swap { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; min-width: 0; }
+.swap > div { min-width: 0; }
+.tag { display: inline-block; font: 700 11px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 6px; border-radius: 3px; margin-bottom: 4px; }
+.tag.add { background: var(--good-soft); color: var(--good); }
+.tag.drop { background: var(--red-soft); color: var(--red); }
+.pname { font-weight: 700; font-size: 17px; }
+.pmeta { color: var(--muted); font-size: 13px; }
+.gain { text-align: right; display: grid; gap: 2px; }
+.gain b { font: 600 24px/1 var(--mono); color: var(--good); }
+.gain span { font: 400 12px/1.3 var(--mono); color: var(--muted); }
+@media (max-width: 640px) { .move { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'when' 'swap' 'gain' 'alts'; } .move .when { text-align: left; } .gain { text-align: left; } .swap { grid-template-columns: 1fr; } }
+
+.count { font: 500 13px/1 var(--mono); color: var(--muted); }
+sup { font-size: 0.65em; color: var(--muted); margin-left: 2px; }
+.board .bsub { font: 400 11px/1.2 var(--mono); color: color-mix(in srgb, var(--ice) 70%, transparent); }
+.alarm.keepon { background: var(--good-soft); border: 1px solid var(--good); }
+.alarm.keepon .alarm-item { background: var(--sheet); }
+.gain .games { font: 700 20px/1 var(--display); letter-spacing: 0.02em; }
+.gain .games.pos { color: var(--good); }
+.gain .games.neg { color: var(--red); }
+.gain .gsub { font: 400 12px/1.2 var(--mono); color: var(--muted); margin-bottom: 4px; }
+.gain b { font-size: 20px; color: var(--ink); }
+.gain b.g2 { font-size: 16px; margin-top: 6px; }
+.unit { margin: -4px 0 10px; font-size: 12.5px; color: var(--muted); }
+.opennum { font: 700 20px/1 var(--display); color: var(--red); }
+.fits { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; margin-top: 3px; }
+.fit { font: 600 10px/1 var(--mono); padding: 2px 3px; border-radius: 3px; background: var(--red-soft); color: var(--red); }
+.fit.g { background: var(--blue-soft); color: var(--blue); }
+.full { font: 500 11px/1 var(--mono); color: var(--muted); }
+tr.open td { background: var(--sheet); border-bottom: 2px solid var(--ink); vertical-align: top; }
+.notes ol, .notes ul.key { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--muted); font-size: 13.5px; max-width: 90ch; }
+.notes b { color: var(--ink); }
+ul.why { margin: 6px 0 4px; padding-left: 16px; font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
+.gain span + span { margin-top: 0; }
+td.small { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+.chip.conf-low { color: var(--warn); border-color: transparent; background: var(--warn-soft); }
+.chip.conf-medium { color: var(--blue); border-color: transparent; background: var(--blue-soft); }
+.chip.conf-high { color: var(--good); border-color: transparent; background: var(--good-soft); }
+.chip.call-hold { background: var(--good-soft); color: var(--good); border-color: var(--good); }
+.chip.call-sell { background: var(--red-soft); color: var(--red); border-color: var(--red); }
+.chip.call-up { color: var(--good); border-color: var(--good); }
+.chip.call-down { color: var(--red); border-color: var(--red); }
+.cell.gone { color: var(--muted); opacity: 0.55; }
+.cell.gone i { display: block; font-style: normal; font-size: 9px; }
+tr.addedrow td { background: var(--good-soft); }
+.gline { font-size: 14px; }
+.gline.warn { color: var(--warn); }
+.mu { display: grid; gap: 10px; }
+.mu-score { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.mu-score > div { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 2px; min-width: 0; }
+.mu-score b { font: 600 24px/1.1 var(--mono); }
+.mu-score b.pos { color: var(--good); } .mu-score b.neg { color: var(--red); }
+.mu-score small { font-size: 12px; color: var(--muted); }
+table.mini td, table.mini th { padding: 5px 8px; }
+table.mini .light { background: var(--blue-soft); }
+p.small { font-size: 13px; }
+@media (max-width: 640px) { .mu-score { grid-template-columns: 1fr; } }
+.held { font-size: 14px; color: var(--muted); }
+.held b { color: var(--ink); }
+.gopt { background: var(--blue-soft); border-radius: 8px; padding: 10px 14px; font-size: 14px; }
+ul.shape { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.decide { background: var(--blue-soft); border-radius: 10px; padding: 12px 16px; }
+.decide ul { margin: 6px 0 0; padding-left: 18px; display: grid; gap: 4px; font-size: 15px; }
+.alts { color: var(--muted); margin-top: 6px; }
+ul.wirewhy { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+details > summary { cursor: pointer; min-height: 32px; display: list-item; padding-block: 6px; }
+.sl details.more summary { font-size: 13px; color: var(--blue); }
+.m-only { display: none; }
+.scroll { -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.grid th:first-child, .grid td:first-child, table.gn th:first-child, table.gn td:first-child { position: sticky; left: 0; z-index: 1; background: var(--sheet); }
+.grid tr.open td:first-child, .grid tr.group td:first-child { background: inherit; }
+@media (pointer: coarse) { .filters button { min-height: 44px; padding: 10px 14px; } }
+@media (max-width: 640px) {
+  header h1 { font-size: 34px; }
+  .m-only { display: block; }
+  p.swipe { font-size: 12px; color: var(--muted); margin: 0 0 6px; }
+  .grid .c-x { display: none; }
+  .grid td:first-child { min-width: 118px; max-width: 132px; box-shadow: 1px 0 0 var(--line); }
+  .grid th.day, .grid td.day { padding-inline: 3px; }
+  .grid .cell { font-size: 12px; }
+  .grid .cell.start i, .grid .cell.bench i, .grid .cell i { font-size: 11px; }
+  table.gn td:first-child { min-width: 92px; box-shadow: 1px 0 0 var(--line); }
+  .mu-score { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+  .mu-score small { font-size: 11px; }
+  .board > div { padding: 10px 12px; }
+  .decide ul { font-size: 14px; }
+  .ladder { display: grid; gap: 4px; }
+  table.stack thead { display: none; }
+  table.stack, table.stack tbody, table.stack tr, table.stack td { display: block; width: auto; }
+  table.stack tr { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  table.stack tr:last-child { border-bottom: 0; }
+  table.stack td { border: 0; padding: 2px 0; text-align: left; }
+  table.stack td.n { text-align: left; }
+  table.stack td[data-l]::before { content: attr(data-l); display: block; font: 600 11px/1.4 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+  table.trades tr { display: grid; grid-template-columns: 30px 1fr 1fr; column-gap: 10px; }
+  table.trades td { grid-column: 2 / 4; min-width: 0; }
+  table.trades td.trade-rank { grid-column: 1; grid-row: 1 / span 6; }
+  table.trades td.n:nth-last-child(2) { grid-column: 2; }
+  table.trades td.n:last-child { grid-column: 3; }
+  table.trades td[data-l="Ask for"]::before { display: none; }
+  table.trades td[data-l="From"]::before { display: inline; content: 'from '; font: 400 13px/1.4 var(--body); letter-spacing: 0; text-transform: none; }
+}
+.more-btn { margin-top: 10px; width: 100%; min-height: 44px; font: 600 14px/1 var(--body); border: 1px solid var(--line); border-radius: 8px; background: var(--sheet); color: var(--blue); }
+@media (min-width: 641px) { details.wide-open > summary { display: none; } details.notes-d > summary { display: list-item; pointer-events: none; list-style: none; } }
+@media (max-width: 640px) {
+  section:not(.show-steady) table.stack tr.steady { display: none; }
+  section:not(.show-extra) .sl.extra, section:not(.show-extra) tr.extra { display: none; }
+  details.dep > summary { color: var(--blue); font-size: 13px; min-height: 28px; padding-block: 4px; }
+  .notes details > summary h2 { font-size: 26px; }
+}
+.insights { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; }
+.ladder { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 6px 0; }
+table.gn td { vertical-align: top; }
+table.gn td .small { white-space: nowrap; font-size: 12px; }
+/* Chips */
+.chip { display: inline-flex; align-items: center; gap: 4px; font: 600 11px/1 var(--body); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.stud { background: var(--red); border-color: var(--red); color: #fff; }
+.chip.strong { background: var(--blue); border-color: var(--blue); color: var(--sheet); }
+.chip.starter { color: var(--blue); border-color: var(--blue); }
+.chip.untouchable { background: var(--ink); color: var(--ice); border-color: var(--ink); }
+.chip.keep { color: var(--good); border-color: var(--good); background: var(--good-soft); }
+.chip.borderline { color: var(--warn); border-color: var(--warn); background: var(--warn-soft); }
+.chip.droppable { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.chip.po { color: var(--blue); border-color: transparent; background: var(--blue-soft); }
+.chip.inj { color: var(--red); border-color: transparent; background: var(--red-soft); }
+.chip.w { color: var(--warn); border-color: transparent; background: var(--warn-soft); }
+
+/* Week grid */
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--sheet); }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+thead th { font: 600 12px/1.2 var(--body); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--sheet); position: sticky; top: 0; }
+td.n, th.n { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.grid td.day, .grid th.day { text-align: center; width: 62px; padding: 5px 3px; }
+.grid th.day.light, .grid td.day.light { background: var(--blue-soft); }
+.grid th.day small { display: block; font: 500 10px/1.3 var(--mono); letter-spacing: 0; text-transform: none; }
+.cell { display: inline-block; min-width: 48px; padding: 4px 2px; border-radius: 4px; font: 500 11px/1.1 var(--mono); }
+.cell.start { background: var(--ink); color: var(--ice); }
+.cell.start i { display: block; font-style: normal; font-size: 9px; opacity: 0.7; }
+.cell.bench { border: 1.5px dashed var(--warn); color: var(--warn); }
+.cell.bench i { display: block; font-style: normal; font-size: 9px; }
+.cell.ir { color: var(--muted); }
+tr.slotrow td { font-size: 12px; color: var(--muted); }
+tr.open td.day { color: var(--red); font: 600 11px/1.2 var(--mono); }
+tr.group td { background: var(--ice); font: 600 11px/1 var(--body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 6px 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Sleepers */
+.trade-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; font-weight: 600; font-size: 14px; }
+.trade-pick select { font: 500 14px/1.2 var(--body); padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); max-width: 100%; }
+.trade-me { margin: 10px 0 4px; font-size: 14px; }
+.bl-pick { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.bl-pick select { font: 500 13px/1.2 var(--body); padding: 5px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); max-width: 100%; }
+.bl-out { line-height: 1.5; }
+.bl-out .neg { color: var(--red); }
+table.buylow td { vertical-align: top; }
+.trade-sub { margin: 18px 0 4px; font: 700 18px/1.2 var(--display); letter-spacing: 0.02em; text-transform: uppercase; }
+.trade-rank { font: 700 17px/1 var(--mono); white-space: nowrap; }
+.trade-flag { margin-top: 4px; font-size: 12.5px; line-height: 1.35; color: var(--red); }
+table.trades td { vertical-align: top; }
+table.trades td.small { min-width: 150px; }
+.vals { white-space: nowrap; }
+table.trades .pmeta b { color: var(--ink); font-weight: 600; }
+.filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.filters button { font: 600 13px/1 var(--body); padding: 8px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); cursor: pointer; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--ice); border-color: var(--ink); }
+.filters button:focus-visible, summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.sleepers { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+@media (max-width: 400px) { .sleepers { grid-template-columns: 1fr; } }
+.sl { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.sl-top { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: start; }
+.score { font: 700 34px/0.9 var(--display); text-align: right; }
+.score small { display: block; font: 500 10px/1.2 var(--mono); color: var(--muted); }
+.bars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.bar { display: grid; gap: 3px; font: 500 10px/1 var(--mono); color: var(--muted); }
+.bar div { height: 5px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar div i { display: block; height: 100%; background: var(--blue); }
+.bar.q div i { background: var(--ink); }
+.sl ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13.5px; }
+.badges { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Playoff schedule */
+.po-bar { height: 8px; background: var(--line); border-radius: 4px; overflow: hidden; min-width: 80px; }
+.po-bar i { display: block; height: 100%; background: var(--blue); }
+tr.mine td { background: var(--blue-soft); }
+details { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+summary { cursor: pointer; font-weight: 700; }
+details div { display: grid; gap: 8px; margin-top: 10px; max-width: 75ch; color: var(--muted); font-size: 14px; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+@media (max-width: 860px) { .two { grid-template-columns: 1fr; } }
+/* Tabs */
+.topbar { max-width: 1120px; margin: 0 auto 18px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+.tabs button { font: 700 15px/1.1 var(--display); letter-spacing: 0.02em; text-transform: uppercase; padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--sheet); color: var(--ink); cursor: pointer; min-height: 40px; }
+.tabs button small { font: 500 11px/1 var(--body); text-transform: none; letter-spacing: 0; color: var(--muted); margin-left: 4px; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--ice); border-color: var(--ink); }
+.tabs button[aria-selected="true"] small { color: color-mix(in srgb, var(--ice) 70%, transparent); }
+.tabs button:focus-visible, .refresh:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.refresh { display: inline-flex; align-items: center; gap: 8px; font: 600 14px/1 var(--body); padding: 9px 14px; min-height: 40px; border-radius: 8px; border: 1px solid var(--blue); background: var(--blue-soft); color: var(--blue); cursor: pointer; }
+.refresh[disabled] { opacity: 0.6; cursor: progress; }
+.refresh-status { font: 400 12px/1.3 var(--mono); color: var(--muted); max-width: 46ch; text-align: right; }
+.refresh-wrap { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+a.refresh { text-decoration: none; }
+@media (max-width: 640px) { .refresh-wrap { justify-content: flex-start; } .refresh-status { text-align: left; } }
+/* Category priorities */
+.filters button.cat-priority { background: var(--good); border-color: var(--good); color: #fff; }
+.filters button.cat-punt { background: var(--red-soft); border-color: var(--red); color: var(--red); text-decoration: line-through; }
+table.cz td.zc { font-size: 12.5px; min-width: 44px; }
+table.cz td:first-child { min-width: 180px; }
+/* Intel */
+.itags { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip.i-up { color: var(--good); border-color: var(--good); background: var(--good-soft); }
+.chip.i-down { color: var(--red); border-color: var(--red); background: var(--red-soft); }
+.chip.i-flat { color: var(--blue); border-color: transparent; background: var(--blue-soft); }
+.chip.who-yours { background: var(--ink); color: var(--ice); border-color: var(--ink); }
+.chip.who-plan { color: var(--good); border-color: var(--good); }
+.intel { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+@media (max-width: 400px) { .intel { grid-template-columns: 1fr; } }
+.it { background: var(--sheet); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; display: grid; gap: 7px; align-content: start; min-width: 0; }
+.it-top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 10px; }
+.it ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; font-size: 13.5px; color: var(--muted); }
+.it ul b { color: var(--ink); font-weight: 600; }
+details.rw { background: var(--ice); border: 0; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+details.rw > summary { font-weight: 600; min-height: 0; padding-block: 2px; }
+details.rw > summary span { font-weight: 400; color: var(--muted); }
+details.rw div { margin-top: 6px; display: block; max-width: none; color: var(--ink); font-size: 13px; }
+.sl .itags, .move .itags, .alarm-item .itags { margin-top: 4px; }
+table.inj td { vertical-align: top; }
+table.inj .bens { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; }
+section:not(.show-extra) .it.extra { display: none; }
+@media (prefers-reduced-motion: no-preference) { .alarm.on { animation: light 1.6s ease-in-out 3; } @keyframes light { 50% { box-shadow: 0 0 0 6px var(--red-soft); } } }
+</style>
+
+<nav class="topbar" aria-label="Leagues">
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" id="tab-points" data-tab="points" aria-selected="true">Points League <small>points</small></button>
+    <button type="button" role="tab" id="tab-cats" data-tab="cats" aria-selected="false">Categories League <small>categories</small></button>
+  </div>
+  <div class="refresh-wrap"><span class="refresh-status" id="refresh-status" aria-live="polite"></span><a class="refresh" id="open-live" hidden target="_blank" rel="noopener">Open the live board ↗</a></div>
+</nav>
+<div class="wrap" id="app" role="tabpanel" aria-labelledby="tab-points"></div>
+<div class="wrap" id="app-cats" role="tabpanel" aria-labelledby="tab-cats" hidden></div>
+
+<script>
+let BOARD = /*__BOARD__*/null;
+// the shared board's worker (set when the board is built): where the newest saved board is read
+const WEB = /*__WEB__*/null;
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const f1 = (x) => (x == null ? '–' : Number(x).toFixed(1));
+const sign = (x) => (x > 0 ? '+' : '') + Number(x).toFixed(1);
+const dayName = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+const short = (iso) => new Date(iso + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+const TIER = { stud: 'Stud', strong: 'Strong', starter: 'Starter', depth: 'Depth' };
+const KEEP = { untouchable: 'Untouchable', keep: 'Keep', borderline: 'Borderline', droppable: 'Droppable' };
+
+function tierChip(p) { return `<span class="chip ${p.tier}">${TIER[p.tier]}${p.rank ? ' #' + p.rank : ''}</span>`; }
+function badges(p) {
+  const b = [];
+  if (p.injured) b.push('<span class="chip inj">Injured / not on active roster</span>');
+  else if (p.inactive) b.push('<span class="chip inj">Not playing yet</span>');
+  if (p.waiverUntil) b.push(`<span class="chip w">Waivers until ${short(p.waiverUntil)}</span>`);
+  if (p.playoff?.elite) b.push(`<span class="chip po">Playoff sked ${Math.round(p.playoff.score)}</span>`);
+  return b.join('');
+}
+// intel tags: green helps his value, red hurts it, blue is information; hover a tag for the detail
+function intelTags(it, max = 6) {
+  if (!it || !it.tags || !it.tags.length) return '';
+  return `<div class="itags">${it.tags.slice(0, max).map((t) => `<span class="chip ${t.tone > 0 ? 'i-up' : t.tone < 0 ? 'i-down' : 'i-flat'}" title="${esc(t.why)}">${esc(t.label)}</span>`).join('')}</div>`;
+}
+function rwNote(it) {
+  const n = it && it.note;
+  if (!n) return '';
+  return `<details class="rw"><summary>Rotowire ${short(n.at)}: <span>${esc(n.headline)}</span></summary><div>${esc(n.story)}</div></details>`;
+}
+function fillChip(p) { return p.fillIn ? ' <span class="chip w">Fill-in</span>' : ''; }
+function meta(p) {
+  const bits = [`${p.team}`, p.pos.join('/'), `${p.gamesWk} gm`];
+  bits.push(p.kind === 'G' ? `${f1(p.perStart)} pts/start, ${Math.round(p.share * 100)}% of starts` : `${f1(p.proj)} pts/gm`);
+  return bits.join(' · ');
+}
+
+function pendingNote(B) {
+  const p = B.dataNotes.statsPending || [];
+  return p.length ? `<p class="sub"><span class="chip w">Stats pending</span> NHL stats for ${p.join(', ')} haven't posted yet; their players use projections only.</p>` : '';
+}
+function staleNote(B) {
+  const t = new Date(B.dataNotes.yahooSnapshot), days = (Date.now() - t) / 864e5;
+  const when = t.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return days > 3
+    ? `<p class="sub"><span class="chip inj">Yahoo rosters last read ${when}</span> Recent adds and drops in your league may be missing.</p>`
+    : `<p class="sub">Yahoo rosters read ${when}.</p>`;
+}
+function header(B) {
+  const wk = B.week, opp = B.team.opponent, pw = B.projectedWeek;
+  const dg = pw.gamesAfter - pw.gamesBefore;
+  return `<header>
+    <div>
+      <div class="eyebrow">${esc(B.league.name)} · Week ${opp?.week ?? ''}</div>
+      <h1>${esc(B.team.name)} weekly board</h1>
+      <p class="sub">${dayName(wk.start)} to ${dayName(wk.end)}${opp ? ` vs <b>${esc(opp.name)}</b>` : ''}</p>
+      ${staleNote(B)}${pendingNote(B)}
+    </div>
+    <div class="board" aria-label="Projected week">
+      <div><span class="eyebrow">As is</span><b>${f1(pw.before)}</b><span class="bsub">${pw.gamesBefore} games</span></div>
+      <div><span class="eyebrow">With moves</span><b class="up">${f1(pw.after)}</b><span class="bsub">${pw.gamesAfter} games</span></div>
+      <div><span class="eyebrow">Gain this week</span><b class="up">${sign(pw.after - pw.before)}</b><span class="bsub">${dg >= 0 ? '+' : ''}${dg} games</span></div>
+    </div>
+  </header>`;
+}
+
+function decision(B) {
+  const gs = B.goalieStarts.after, gt = B.goalieTimeline || {}, pc = (v) => Math.round(v * 100) + '%';
+  const lines = B.plan.map((m) => `<li><b>${m.dayLabel}:</b> add <b>${esc(m.add.name)}</b>, drop ${esc(m.drop.name)} <span class="muted">(${sign(m.weekGain)} this week, ${sign(m.longTerm)} rest of season; ${m.games.net >= 0 ? '+' : ''}${m.games.net} skater games)</span></li>`);
+  const risk = 1 - gs.pMin;
+  const gsx = B.goalieStream;
+  const trig = gt.trigger >= 0
+    ? ` <b>Trigger:</b> ${gt.trigger === 0 ? 'no starts' : '≤' + gt.trigger + ' start' + (gt.trigger > 1 ? 's' : '')} by Fri (${pc(gt.pTrigger)}) drops you to ${pc(gt.reach[gt.trigger])} (${f1(gt.expLoss[gt.trigger])} pts at risk): ${gsx && !gsx.none ? `stream a goalie confirmed Fri–Sun, drop ${esc(gsx.drop.name)}` : 'nobody droppable, accept it'}.`
+    : gt.reach ? ` No trigger: even 0 starts by Fri still reaches 3 ${pc(gt.reach[0])} of the time.` : '';
+  const goalieLine = `<li><b>Goalies:</b> ${pc(gs.pMin)} to reach 3 starts (${f1(gs.gLost)} pts expected lost). Starts Mon–Thu ${f1(gt.early ?? 0)}, Fri–Sun ${f1(gt.late ?? 0)}.${trig}</li>`;
+  const held = B.unusedAdds > 0 ? `<li><b>Hold ${B.unusedAdds} add${B.unusedAdds > 1 ? 's' : ''}</b> for ${gt.trigger >= 0 ? 'the trigger, ' : ''}injuries or a confirmed goalie start.</li>` : '';
+  return `<section class="decide"><div class="eyebrow">This week in one look</div><ul>${lines.join('')}${goalieLine}${held}</ul></section>`;
+}
+function insightsStrip(B) {
+  // PP1 promotions and demotions now live in the Intel section
+  const list = (B.insights || []).filter((i) => i.kind !== 'promotion' && i.kind !== 'demotion');
+  if (!list.length) return '';
+  const tag = { promotion: 'PP1 now', demotion: 'Off PP1', split: 'PP split', goalie: 'Goalie', change: 'Since ' + (B.dfoPrev ? short(B.dfoPrev) : 'last week') };
+  return `<section>
+    <div class="sec-head"><h2>Deployment changes Yahoo won't show you</h2><span class="count">DailyFaceoff vs your sheet</span></div>
+    <ul class="insights">${list.slice(0, 8).map((i) => `<li><span class="chip ${i.who === 'yours' ? 'stud' : 'keep'}">${tag[i.kind] || i.kind}</span> ${esc(i.text)}</li>`).join('')}</ul>
+  </section>`;
+}
+function alarm(B) {
+  const list = B.studsAvailable;
+  const studs = list.filter((p) => p.wireCall === 'stud');
+  const item = (p) => `<div class="alarm-item"><div class="pname">${esc(p.name)} <span class="chip ${p.wireCall === 'stud' ? 'stud' : 'keep'}">${p.wireCall === 'stud' ? 'Stud' : 'Keep'}</span></div><div class="pmeta">${esc(meta(p))}</div>${intelTags(p.intel, 4)}<div class="small muted">${esc((p.notes || [])[0] || '')}</div>${p.blocker ? `<div class="small"><b>${esc(p.blocker)}</b></div>` : ''}<div class="badges">${badges(p)}</div></div>`;
+  if (list.length) {
+    return `<section class="alarm ${studs.length ? 'on' : 'keepon'}" aria-live="polite">
+      <div class="eyebrow">Stud &amp; keep check</div>
+      <h2>${studs.length ? `Stud on the wire: pick ${studs.length === 1 ? 'him' : 'them'} up` : `Keep-level player${list.length > 1 ? 's' : ''} on the wire`}</h2>
+      <div class="alarm-list">${list.map(item).join('')}</div>
+    </section>`;
+  }
+  return `<section class="alarm off">
+    <div class="eyebrow">Stud &amp; keep check</div>
+    <h3>No studs or keep-level players on your wire</h3>
+    <p class="small muted" style="margin:4px 0 6px">This week's adds, then your top long-term holds (same order as that section):</p>
+    ${(() => { const bl = B.bestOnWire.map((p) => p.blocker || ''), same = bl.length > 1 && bl.every((x) => x === bl[0]) && bl[0] !== "In this week's plan"; return `<ul class="wirewhy">${B.bestOnWire.map((p) => `<li><b>${esc(p.name)}</b> <span class="pmeta">${p.team} · ${p.pos.join('/')} · ${p.kind === 'G' ? f1(p.perStart) + '/start' : f1(p.proj) + '/gm'}${p.fillIn ? ' · fill-in' : ''}</span>${same ? '' : `<div class="small">${p.blocker === "In this week's plan" ? '<span class="chip w">In this week’s plan</span>' : esc(p.blocker || '')}</div>`}</li>`).join('')}</ul>${same ? `<p class="small">${esc(bl[0])}</p>` : ''}`; })()}
+  </section>`;
+}
+
+function gamesLine(g) {
+  const net = `${g.net >= 0 ? '+' : ''}${g.net} game${Math.abs(g.net) === 1 ? '' : 's'}`;
+  return `<span class="games ${g.net > 0 ? 'pos' : g.net < 0 ? 'neg' : ''}">${net}</span><span class="gsub">gain ${g.gain}, lose ${g.lost}</span>`;
+}
+
+function goalieOpt(B) {
+  const g = B.goalieStream;
+  if (!g) return '';
+  const pc = (v) => Math.round(v * 100) + '%';
+  if (g.none) return `<div class="gopt"><span class="tag add">Goalie stream check</span> ${pc(g.pMinBefore)} chance of 3+ goalie starts (under 3 wipes all goalie points). No stream without dropping a protected player.</div>`;
+  return `<div class="gopt"><span class="tag add">Goalie stream check</span> Best goalie add: <b>${esc(g.add.name)}</b> (${g.add.team}, ${pc(g.add.share)} of starts) on ${g.dayLabel} for <b>${esc(g.drop.name)}</b>: ${g.gamesAfter} game${g.gamesAfter === 1 ? '' : 's'} left after the add, ${f1(g.expStarts)} expected starts${g.b2bNights && g.b2bNights.length ? ` (back-to-back ${g.b2bNights.join(', ')}: backups usually start one)` : ''}.
+    <div class="ladder"><span>3+ starts: <b>${pc(g.pMinBefore)}</b> → <b>${pc(g.pMinAfter)}</b></span><span>Goalie pts that count: <b>${f1(g.gPtsBefore)}</b> → <b>${f1(g.gPtsAfter)}</b></span><span>Skater games lost: <b>${g.skaterGamesLost}</b></span><span>Net: <b>${sign(g.net)}</b> (${sign(g.weekPts)} this week, ${sign(g.longTerm)} long-term)</span></div>
+    <div class="small muted">${g.verdict === 'worth it' ? 'Clears the bar: make it.' : g.verdict === 'in plan' ? 'A goalie add is already in the plan.' : `Below the ${B.model.MIN_MOVE_GAIN}-pt bar: ${g.longTerm <= -3 ? `losing ${esc(g.drop.name)} costs ${f1(-g.longTerm)} pts long-term` : g.skaterGamesLost > 0 ? `it costs ${g.skaterGamesLost} skater game${g.skaterGamesLost > 1 ? 's' : ''}` : 'your goalies already fill most G-slot nights'}.`} ${esc(g.add.notes.slice(0, 2).join(' · '))}</div>${g.others && g.others.length > 1 ? `<div class="small muted">Other goalie streams: ${g.others.slice(1).map((o) => `${esc(o.name)} ${o.day} (${f1(o.starts)} starts) ${sign(o.net)}`).join(' · ')}</div>` : ''}</div>`;
+}
+function goalieOptOld(B) {
+  const g = B.goalieOption;
+  if (!g) return '';
+  const gs = B.goalieStarts.after;
+  return `<div class="gopt"><span class="tag add">Goalie option</span> Your chance of reaching ${gs.min} goalie starts is <b>${Math.round(gs.pMin * 100)}%</b>. Adding <b>${esc(g.add.name)}</b> (${g.add.team}, ${g.add.gamesWk} games, ${Math.round(g.add.share * 100)}% of starts) on ${g.dayLabel} for <b>${esc(g.drop.name)}</b> raises it to <b>${Math.round(g.pMinAfter * 100)}%</b>: ${sign(g.weekPts)} pts this week, ${sign(g.longTerm)} rest of season. Under 3 starts wipes every goalie point that week (${f1(gs.gRaw)} expected).</div>`;
+}
+
+function shapeSection(B) {
+  const sh = B.shape, ups = B.upgrades || [];
+  if (!sh.notes.length && !ups.length) return '';
+  return `<section>
+    <div class="sec-head"><h2>Roster shape</h2><span class="count">${sh.centres} C · ${sh.wingers} W · ${sh.dmen} D healthy</span></div>
+    ${sh.notes.length ? `<ul class="shape">${sh.notes.map((n) => `<li>${esc(n)}</li>`).join('')}</ul>` : ''}
+    ${ups.length ? `<div class="scroll"><table class="stack"><thead><tr><th>Rest-of-season upgrade</th><th>Over your</th><th class="n">Per game</th><th class="n">Season, your roster</th><th>Why</th></tr></thead><tbody>${ups.map((u) => `<tr>
+      <td><b>${esc(u.add.name)}</b> <span class="pmeta">${u.add.team} · ${u.add.pos.join('/')} · ${f1(u.add.proj)}/gm</span><div class="small muted">${u.add.notes.slice(0, 2).map(esc).join('<br>')}</div></td>
+      <td>${esc(u.over.name)} <span class="pmeta">${f1(u.over.proj)}/gm</span></td>
+      <td class="n">+${f1(u.gap)}</td>
+      <td class="n"><b>${sign(u.rosGain)}</b></td>
+      <td class="small">${B.plan.some((m) => m.add.id === u.add.id) ? 'In this week\'s plan' : u.pos === 'D' ? 'Weighed against this week\'s schedule; see moves' : `He'd start about ${Math.round(u.startRateIfAdded * 100)}% of his games on your roster${u.rosGain < 0 ? `: better per game, but ${u.add.pos.length === 1 ? 'only ' + u.add.pos[0] + '-eligible and those slots are full' : 'his nights land where your slots are full'}, so ${esc(u.over.name)} is worth more to you` : ''}${sh.wingers > sh.slots.W + 2 && u.pos !== 'C' ? ' (wing logjam)' : ''}`}</td></tr>`).join('')}</tbody></table></div>` : ''}
+  </section>`;
+}
+
+function matchup(B) {
+  const o = B.opponent;
+  if (!o) return '';
+  const pw = B.projectedWeek;
+  const margin = pw.after - o.total;
+  const nights = B.week.nightly;
+  const mineB = B.lineupBefore.map((d) => d.starters.filter((x) => x.slot !== 'G').length);
+  const mineA = B.lineupAfter.map((d) => d.starters.filter((x) => x.slot !== 'G').length);
+  const w = B.model.WEEK_WEIGHT, mb = B.model.marginBefore;
+  const read = mb == null ? '' : w < 0.95 ? `Ahead by ${f1(mb)} before moves: this week's gains are weighted ${Math.round(w * 100)}% because points past a win matter less.` : `Margin ${sign(mb)} before moves: this week's games count close to full.`;
+  const _old = w < 0.5 ? `Ahead by ${f1(mb)} before moves: this week's points count for less, so the plan favours long-term adds over streams.`
+    : w < 1 ? `Ahead by ${f1(mb)} before moves: streams have to clear a higher bar (weekly gains weighted ${Math.round(w * 100)}%).`
+    : w > 1 ? `Behind by ${f1(-mb)} before moves: weekly games are weighted up.` : 'Close matchup: weekly games count in full.';
+  return `<section>
+    <div class="sec-head"><h2>Matchup</h2><span class="count">vs ${esc(o.name)}</span></div>
+    <div class="mu">
+      <div class="mu-score"><div><span class="eyebrow">You, with moves</span><b>${f1(pw.after)}</b><small>${pw.gamesAfter} skater games</small></div>
+        <div><span class="eyebrow">${esc(o.name)}</span><b>${f1(o.total)}</b><small>${o.games} skater games</small></div>
+        <div><span class="eyebrow">Margin</span><b class="${margin >= 0 ? 'pos' : 'neg'}">${sign(margin)}</b><small>${esc(read)}</small></div>
+        ${o.winAfter != null ? `<div><span class="eyebrow">Win chance</span><b>${Math.round(o.winAfter * 100)}%</b><small>${Math.round(o.winBefore * 100)}% as is</small></div>` : ''}</div>
+      <div class="scroll"><table class="mini">
+        <thead><tr><th>Skater games</th>${nights.map((n) => `<th class="n ${n.offNight ? 'light' : ''}">${n.day}</th>`).join('')}</tr></thead>
+        <tbody>
+          <tr><td>You (as is)</td>${mineB.map((v, i) => `<td class="n ${nights[i].offNight ? 'light' : ''}">${v}</td>`).join('')}</tr>
+          <tr><td>You (moves)</td>${mineA.map((v, i) => `<td class="n ${nights[i].offNight ? 'light' : ''}"><b>${v}</b></td>`).join('')}</tr>
+          <tr><td>${esc(o.name)}</td>${o.nights.map((n, i) => `<td class="n ${nights[i].offNight ? 'light' : ''}">${n.starts}</td>`).join('')}</tr>
+        </tbody></table></div>
+      <p class="muted small">Their biggest weeks: ${o.top.map((t) => `${esc(t.name)} (${t.games} gm, ${f1(t.pts)})`).join(' · ')}</p>
+    </div>
+  </section>`;
+}
+
+function confChip(c) {
+  return `<span class="chip conf-${c}">${c} confidence</span>`;
+}
+
+function ledgerSection(B) {
+  const rows = B.roster.filter((p) => p.ledger);
+  if (!rows.length) return '';
+  const order = { 'Hold: buy-low': 0, 'Sell-high': 1, 'Usage up': 2, 'Usage slipping': 3, Steady: 4 };
+  rows.sort((a, b) => order[a.ledger.call] - order[b.ledger.call]);
+  const cls = (c) => ({ 'Hold: buy-low': 'hold', 'Sell-high': 'sell', 'Usage up': 'up', 'Usage slipping': 'down', Steady: 'steady' }[c]);
+  return `<section>
+    <div class="sec-head"><h2>Your roster: usage vs results</h2><span class="count">what the role says</span></div><p class="unit">Buy-low = producing 2+ pts/gm below what his role implies; sell-high = 3+ above with no role growth.</p>
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Player</th><th>Call</th><th>Why</th><th>Deployment</th></tr></thead>
+      <tbody>${rows.map((p) => `<tr class="${p.ledger.call === 'Steady' ? 'steady' : ''}">
+        <td><b>${esc(p.name)}</b><div class="pmeta">${p.team} · ${p.gp} GP</div>${intelTags(p.intel, 4)}</td>
+        <td><span class="chip call-${cls(p.ledger.call)}">${p.ledger.call}</span></td>
+        <td>${esc(p.ledger.why)}</td>
+        <td class="small"><details class="dep wide-open"><summary>Deployment</summary>${p.notes.map(esc).join('<br>')}</details></td></tr>`).join('')}</tbody>
+    </table></div>
+    ${rows.some((p) => p.ledger.call === 'Steady') ? `<button type="button" class="m-only more-btn" data-toggle="show-steady">Show ${rows.filter((p) => p.ledger.call === 'Steady').length} steady players</button>` : ''}
+  </section>`;
+}
+
+let gridMode = 'after';
+function gridTable(B) {
+  const days = B.week.nightly;
+  const L = gridMode === 'after' ? B.lineupAfter : B.lineupBefore;
+  const dc = (d) => `day ${d.offNight ? 'light' : ''}`;
+  const dayHead = days.map((d) => `<th class="${dc(d)}">${d.day}<small>${d.games} gm</small></th>`).join('');
+  const startedBy = L.map((ld) => new Map(ld.starters.map((s) => [s.id, s.slot])));
+  const onRoster = L.map((ld) => new Set(ld.roster));
+  const people = gridMode === 'after' ? [...B.roster, ...B.addedCards.map((c) => ({ ...c, slot: 'BN', status: '', keep: 'droppable', added: true }))] : B.roster;
+  const row = (p) => {
+    const ir = /^IR/.test(p.slot);
+    const cells = days.map((d, i) => {
+      const opp = p.opps[i];
+      if (!ir && !onRoster[i].has(p.id)) return `<td class="${dc(d)}"><span class="cell gone">${opp ? esc(opp) : '·'}<i>${p.added ? 'not yet' : 'dropped'}</i></span></td>`;
+      if (!opp) return `<td class="${dc(d)}"></td>`;
+      if (ir) return `<td class="${dc(d)}"><span class="cell ir">${esc(opp)}</span></td>`;
+      const s = startedBy[i].get(p.id);
+      return `<td class="${dc(d)}"><span class="cell ${s ? 'start' : 'bench'}">${esc(opp)}<i>${s ? s : 'bench'}</i></span></td>`;
+    }).join('');
+    return `<tr class="${p.added ? 'addedrow' : ''}"><td><div class="pname" style="font-size:15px">${esc(p.name)}${p.added ? ' <span class="tag add">Add</span>' : ''}</div><div class="pmeta">${p.team} · ${p.pos.join('/')}${p.status ? ' · ' + p.status : ''}</div>
+      <div class="m-only pmeta">${TIER[p.tier] || ''}${p.added ? '' : ' · ' + KEEP[p.keep]} · ${p.kind === 'G' ? f1(p.perStart) + '/start' : f1(p.proj) + '/gm'}</div></td>
+      <td class="c-x">${tierChip(p)}</td><td class="c-x">${p.added ? '' : `<span class="chip ${p.keep}">${KEEP[p.keep]}</span>`}</td>
+      <td class="n c-x">${p.kind === 'G' ? f1(p.perStart) : f1(p.proj)}</td>${cells}</tr>`;
+  };
+  const groups = [
+    ['Forwards', people.filter((p) => p.kind === 'S' && !p.pos.includes('D') && !/^IR/.test(p.slot))],
+    ['Defense', people.filter((p) => p.pos.includes('D') && !/^IR/.test(p.slot))],
+    ['Goalies', people.filter((p) => p.kind === 'G' && !/^IR/.test(p.slot))],
+    ['Injured reserve', people.filter((p) => /^IR/.test(p.slot))],
+  ];
+  const openCell = (ld, i) => {
+    if (!ld.openSkater && !ld.openG) return `<td class="${dc(days[i])}"><span class="full">full</span></td>`;
+    const sk = ['C', 'LW', 'RW', 'D'].filter((pos) => ld.fits[pos] > 0).map((pos) => `<span class="fit">${pos}${ld.fits[pos] > 1 ? '×' + ld.fits[pos] : ''}</span>`).join('');
+    const g = ld.openG > 0 ? `<span class="fit g">G${ld.openG > 1 ? '×' + ld.openG : ''}</span>` : '';
+    return `<td class="${dc(days[i])}"><div class="opennum">${ld.openSkater + ld.openG}</div><div class="fits">${sk}${g}</div></td>`;
+  };
+  const openRow = `<tr class="open"><td><b>Empty slots</b><div class="pmeta">open spots · positions that fit</div></td><td class="c-x"></td><td class="c-x"></td><td class="c-x"></td>${L.map(openCell).join('')}</tr>`;
+  const gsx = gridMode === 'after' ? B.goalieStarts.after : B.goalieStarts.before;
+  const ptsRow = `<tr class="slotrow"><td>Projected points<div class="pmeta">before ${f1(gsx.gLost)} expected goalie-minimum loss</div></td><td class="c-x"></td><td class="c-x"></td><td class="c-x"></td>${L.map((ld, i) => `<td class="${dc(days[i])} n">${f1(ld.points)}</td>`).join('')}</tr>`;
+  return `<table class="grid">
+      <thead><tr><th>Player</th><th class="c-x">Quality</th><th class="c-x">Drop call</th><th class="n c-x">Pts/gm</th>${dayHead}</tr></thead>
+      <tbody>${openRow}${groups.filter(([, l]) => l.length).map(([g, l]) => `<tr class="group"><td colspan="${4 + days.length}">${g}</td></tr>${l.map(row).join('')}`).join('')}${ptsRow}</tbody>
+    </table>`;
+}
+
+function moves(B) {
+  const head = `<div class="sec-head"><h2>This week's moves</h2><span class="count">${B.plan.length} of ${B.week.firstDay ? B.week.addsLeft + " adds left" : B.league.maxAdds + " adds"}</span></div><p class="unit">Pts = fantasy points. Each move = this week's gain (weighted by how close the matchup is) + rest of season, simulated in your lineup.</p>${B.week.firstDay ? `<p class="small muted">Moves start ${B.week.nightly[B.week.firstDay].day}; ${B.league.maxAdds - B.week.addsLeft} add${B.league.maxAdds - B.week.addsLeft === 1 ? "" : "s"} used.</p>` : ""}`;
+  if (!B.plan.length) return `<section>${head}<p class="muted">Hold your adds. No move gains ${B.model.MIN_MOVE_GAIN}+ points.</p></section>`;
+  const held = B.unusedAdds > 0 ? `<p class="held"><b>Holding ${B.unusedAdds} add${B.unusedAdds > 1 ? 's' : ''}.</b> Keep them for injuries, call-ups or a confirmed goalie start.</p>` : '';
+  return `<section>${head}<div class="moves">${B.plan.map((m) => `
+    <div class="move">
+      <div class="when">${m.dayLabel}<small>${short(m.day)}</small></div>
+      <div class="swap">
+        <div><span class="tag add">Add</span><div class="pname">${esc(m.add.name)} ${tierChip(m.add)}${fillChip(m.add)}${m.stream ? ' <span class="chip w">Stream</span>' : ''}</div><div class="pmeta">${esc(meta(m.add))}</div>${intelTags(m.add.intel, 4)}
+          <ul class="why">${m.add.notes.slice(0, 3).map((n) => `<li>${esc(n)}</li>`).join('')}</ul>
+          <div class="small"><b>When:</b> ${esc(m.when)}. ${m.addGamesForYou} game${m.addGamesForYou === 1 ? '' : 's'} left this week, ${m.games.gain} in your lineup.</div>
+          <div class="badges">${confChip(m.confidence)}${badges(m.add)}</div></div>
+        <div><span class="tag drop">Drop</span><div class="pname">${esc(m.drop.name)} ${tierChip(m.drop)}</div><div class="pmeta">${esc(meta(m.drop))}</div>${intelTags(m.drop.intel, 4)}
+          <ul class="why"><li>${esc(m.dropWhy)}</li></ul></div>
+      </div>
+      ${m.alts && m.alts.length ? `<details class="small alts"><summary><b>Instead of ${esc(m.add.name.split(' ').slice(-1)[0])}:</b> ${m.alts.length} alternative${m.alts.length > 1 ? 's' : ''}, best ${esc(m.alts[0].name)} ${sign(m.alts[0].net)}</summary>${m.alts.map((a) => `${esc(a.name)} (${a.team} ${a.pos.join('/')}, ${f1(a.proj)}/gm) ${sign(a.net)}, starts ${a.starts} of ${a.games} games${a.starts < a.games ? '' : ''}${a.long <= -2 ? `, costs ${f1(-a.long)} long-term` : a.long >= 2 ? `, +${f1(a.long)} long-term` : ''}`).join('<br>')}</details>` : ''}
+      <div class="gain">${gamesLine(m.games)}<b>${sign(m.net)} pts</b><span>${sign(m.weekGain)} this week × ${Math.round((m.weekWeight ?? B.model.WEEK_WEIGHT) * 100)}% matchup weight</span><span>${sign(m.longTerm)} rest of season${m.seasonStart != null ? ` (he'd start ${Math.round(m.seasonStart * 100)}% of his games)` : ''}</span>${m.delayCost >= 0.1 ? `<span>−${f1(m.delayCost)} for waiting until ${m.dayLabel}</span>` : ''}${m.churn ? `<span>−${m.churn} second add on one slot</span>` : ''}${m.goalieMin >= 0.5 ? `<span>(this week incl. ${sign(m.goalieMin)} goalie pts saved from the 3-start minimum)</span>` : ''}</div>
+    </div>`).join('')}</div>${held}${goalieOpt(B)}</section>`;
+}
+
+function goalieNightsTable(B) {
+  const gn = B.goalieNights || [];
+  if (!gn.length) return '';
+  return `<div class="scroll"><table class="mini gn"><thead><tr><th>Goalie start chance</th>${gn.map((n) => `<th class="n">${n.day}</th>`).join('')}</tr></thead><tbody>
+    ${[...new Set(gn.flatMap((n) => n.goalies.map((g) => g.name)))].map((name) => `<tr><td>${esc(name)}</td>${gn.map((n) => { const g = n.goalies.find((x) => x.name === name); return `<td class="n">${g ? `${Math.round(g.p * 100)}%<div class="small muted">${esc(g.opp)}${g.b2b ? ' · b2b' : ''}</div>` : ''}</td>`; }).join('')}</tr>`).join('')}
+  </tbody></table></div>`;
+}
+function grid(B) {
+  const gs = gridMode === 'after' ? B.goalieStarts.after : B.goalieStarts.before;
+  const warn = gs.pMin < 0.85;
+  return `<section>
+    <div class="sec-head"><h2>Your week, slotted</h2>
+      <div class="filters" role="group" aria-label="Lineup view"><button type="button" id="g-before" data-g="before" aria-pressed="${gridMode === 'before'}">As is</button><button type="button" id="g-after" data-g="after" aria-pressed="${gridMode === 'after'}">With moves</button></div></div>
+    <p class="gline ${warn ? 'warn' : ''}" id="gline">Goalie starts: <b>${f1(gs.expected)}</b> expected, <b>${Math.round(gs.pMin * 100)}%</b> chance of reaching the ${gs.min}-start minimum${gs.gLost >= 0.5 ? ` (${f1(gs.gLost)} goalie pts expected lost to it)` : ''}</p>
+    <p class="m-only swipe">Swipe the table sideways for the rest of the week →</p>
+    <div class="scroll" id="gridwrap">${gridTable(B)}</div>
+    ${goalieNightsTable(B)}
+  </section>`;
+}
+
+function pickups(B) {
+  if (!B.pickups.length) return B.plan.length ? `<section><div class="sec-head"><h2>Other adds</h2></div><p class="muted">None: everyone droppable is protected or already in the plan.</p></section>` : '';
+  return `<section>
+    <div class="sec-head"><h2>Other adds worth a look</h2><span class="count">best drop for each</span></div><p class="unit">Net = fantasy points gained, this week + rest of season.</p>
+    <div class="scroll"><table class="stack">
+      <thead><tr><th>Add</th><th>Quality</th><th class="n">Pts/gm</th><th>Role</th><th class="n">This wk</th><th class="n">Next wk</th><th>Drop</th><th class="n">Net</th></tr></thead>
+      <tbody>${B.pickups.map((m) => `<tr>
+        <td><b>${esc(m.add.name)}</b><div class="pmeta">${m.add.team} · ${m.add.pos.join('/')}</div><div class="badges">${confChip(m.confidence)}${badges(m.add)}</div></td>
+        <td>${tierChip(m.add)}</td><td class="n">${m.add.kind === 'G' ? f1(m.add.perStart) + '/st' : f1(m.add.proj)}</td>
+        <td class="small">${m.add.notes.slice(0, 2).map(esc).join('<br>')}</td>
+        <td class="n">${m.add.gamesWk}<span class="muted"> (${m.add.lightWk} light)</span></td>
+        <td class="n">${m.add.gamesNext}<span class="muted"> (${m.add.lightNext} light)</span></td>
+        <td>${esc(m.drop.name)} <span class="muted">${m.dayLabel}</span></td>
+        <td class="n"><b>${sign(m.net)}</b></td></tr>`).join('')}</tbody>
+    </table></div>
+  </section>`;
+}
+
+let intelFilter = 'all';
+const ROLE_KINDS = new Set(['pp-up', 'pp-down', 'pp-conflict', 'line-up', 'line-down', 'minutes', 'minutes-down', 'starter', 'pushing', 'losing', 'crease-backup']);
+const NEWS_KINDS = new Set(['coach', 'coach-down', 'callup', 'senddown', 'claimed', 'scratch', 'return', 'injury', 'debut', 'start', 'backup', 'trending', 'trending-down', 'monitor']);
+function intelCards(B) {
+  const list = (B.intel || []).filter((i) => intelFilter === 'all'
+    || (intelFilter === 'yours' && (i.who === 'yours' || i.who === 'in your plan'))
+    || (intelFilter === 'wire' && i.who === 'on the wire')
+    || (intelFilter === 'opening' && i.tags.some((t) => t.kind === 'opening'))
+    || (intelFilter === 'role' && i.tags.some((t) => ROLE_KINDS.has(t.kind)))
+    || (intelFilter === 'news' && (i.note || i.tags.some((t) => NEWS_KINDS.has(t.kind)))));
+  if (!list.length) return '<p class="muted">Nothing flagged for this filter.</p>';
+  const whoChip = (w) => `<span class="chip ${w === 'yours' ? 'who-yours' : w === 'in your plan' ? 'who-plan' : ''}">${w === 'in your plan' ? 'in your plan' : w}</span>`;
+  return list.map((i, k) => `<article class="it${k >= 8 ? ' extra' : ''}">
+    <div class="it-top"><div><span class="pname">${esc(i.name)}</span> <span class="pmeta">${i.team} · ${i.pos.join('/')} · ${f1(i.proj)}/gm${i.owned != null ? ` · ${i.owned}% owned on ESPN${i.ownedDelta ? ` (${i.ownedDelta > 0 ? '+' : ''}${i.ownedDelta})` : ''}` : ''}${i.recentToi && !i.pos.includes('G') ? ` · ${i.recentToi} TOI last 3` : ''}</span></div>${whoChip(i.who)}</div>
+    ${intelTags(i, 8)}
+    <ul>${i.tags.map((t) => `<li><b>${esc(t.label)}:</b> ${esc(t.why)}${t.priced ? '' : ' <span class="muted">(news, not yet in the projection)</span>'}</li>`).join('')}</ul>
+    ${rwNote(i)}
+  </article>`).join('');
+}
+function intelSection(B) {
+  const all = B.intel || [];
+  if (!all.length) return '';
+  const opts = [['all', 'All'], ['yours', 'Yours'], ['wire', 'Wire'], ['opening', 'Injury openings'], ['role', 'Role changes'], ['news', 'News']];
+  const n = (k) => all.filter((i) => (k === 'yours' ? i.who === 'yours' || i.who === 'in your plan' : i.who === 'on the wire')).length;
+  return `<section id="intel-sec">
+    <div class="sec-head"><h2>Intel</h2><span class="count">${n('yours')} on your team · ${n('wire')} on the wire</span></div>
+    <div class="filters" role="group" aria-label="Filter intel">${opts.map(([k, l]) => `<button type="button" data-i="${k}" aria-pressed="${k === intelFilter}">${l}</button>`).join('')}</div>
+    <div class="intel" id="intel">${intelCards(B)}</div>
+    ${all.length > 8 ? `<button type="button" class="more-btn" data-toggle="show-extra">Show all ${all.length}</button>` : ''}
+  </section>`;
+}
+function injurySection(B) {
+  const list = B.keyInjuries || [];
+  if (!list.length) return '';
+  const whoTxt = (w) => (w === 'yours' ? '<b>yours</b>' : w === 'on the wire' ? '<b style="color:var(--good)">wire</b>' : 'rostered');
+  return `<section>
+    <div class="sec-head"><h2>Key injuries</h2><span class="count">who is out, until when, and who gains</span></div>
+    <div class="scroll"><table class="stack inj">
+      <thead><tr><th>Out</th><th>Back</th><th>Injury</th><th>Opens space for</th></tr></thead>
+      <tbody>${list.map((k, i) => `<tr class="${k.mine ? 'mine' : ''}${i >= 10 && !k.mine ? ' extra' : ''}">
+        <td><b>${esc(k.name)}</b>${k.mine ? ' <span class="pmeta">yours</span>' : ''}<div class="pmeta">${k.team} · ${k.pos.join('/')} · ${esc(k.status)}</div></td>
+        <td class="mono">${k.back ? `~${short(k.back)}${k.games ? `<div class="pmeta">${k.games} ${k.team} game${k.games === 1 ? '' : 's'}</div>` : ''}` : '<span class="muted">no timeline</span>'}</td>
+        <td class="small">${k.injury ? esc(k.injury) + '. ' : ''}${esc(k.comment || '')}</td>
+        <td>${k.beneficiaries.length ? `<div class="bens">${k.beneficiaries.map((q) => `<span>${esc(q.name)} <span class="pmeta">${q.pos.join('/')} · ${whoTxt(q.who)} · ${f1(q.proj)}${q.projLong != null ? ` → ${f1(q.projLong)}` : ''}/gm</span></span>`).join('')}</div>` : '<span class="muted small">no one\'s usage has moved yet</span>'}</td></tr>`).join('')}</tbody>
+    </table></div>
+    ${list.length > 10 ? `<button type="button" class="m-only more-btn" data-toggle="show-extra">Show all ${list.length}</button>` : ''}
+  </section>`;
+}
+
+let filter = 'all';
+function sleeperCards(B) {
+  const list = B.holds.filter((s) => filter === 'all' || (filter === 'f' && !s.pos.includes('D') && !s.pos.includes('G')) || (filter === 'g' && s.pos.includes('G')) || (filter === 'd' && s.pos.includes('D')) || (filter === 'young' && s.age && s.age <= 23) || (filter === 'po' && s.playoff?.elite));
+  if (!list.length) return '<p class="muted">Nobody on the wire matches this filter.</p>';
+  const bar = (k, label, v) => `<div class="bar ${k}">${label}<div><i style="width:${v}%"></i></div></div>`;
+  return list.map((s, i) => `<article class="sl${i >= 4 ? ' extra' : ''}">
+    <div class="sl-top">
+      <div><div class="pname">${esc(s.name)}</div><div class="pmeta">${s.team} · ${s.pos.join('/')}${s.age ? ' · age ' + s.age : ''} · ${f1(s.proj)} pts/gm${s.toi ? ` · ${s.toi} TOI` : ''}${s.toiPrev ? ` <span class="muted">(${s.toiPrev} last season)</span>` : ''}</div>${s.planned ? `<div class="badges"><span class="chip w">In this week's plan: add ${esc(s.planned)}</span></div>` : ''}</div>
+      <div class="score">${Math.round(s.score)}<small>hold score</small></div>
+    </div>
+    <div class="badges">${tierChip(s)}${confChip(s.confidence)}${badges(s)}</div>
+    <div class="bars">${bar('q', 'Quality', s.parts.quality)}${bar('', 'Role', s.parts.role)}${bar('', 'Growth', s.parts.youth)}</div>
+    ${intelTags(s.intel)}${s.parts.news ? `<div class="small muted">News ${s.parts.news > 0 ? 'adds' : 'takes off'} ${Math.abs(s.parts.news)} pts: ${esc(s.intel.tags.filter((t) => !t.priced && t.tone).map((t) => t.label).join(', '))}</div>` : ''}
+    <ul>${s.reasons.slice(0, 3).map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+    ${s.reasons.length > 3 ? `<details class="more"><summary>${s.reasons.length - 3} more</summary><ul>${s.reasons.slice(3).map((r) => `<li>${esc(r)}</li>`).join('')}</ul></details>` : ''}
+    ${rwNote(s.intel)}
+  </article>`).join('');
+}
+
+function sleepers(B) {
+  const opts = [['all', 'All'], ['f', 'Forwards'], ['d', 'Defense'], ['g', 'Goalies'], ['young', 'Age 23 and under'], ['po', 'Good playoff schedule']];
+  return `<section>
+    <div class="sec-head"><h2>Long-term holds on your wire</h2><span class="count">quality + role</span></div><p class="unit">Hold score 0–100: quality 45%, role 30%, growth 25% (age vs. the breakout window: forwards 21–23, D 23–25), ±8 for news. Pts/gm = projected fantasy points per game.</p>
+    <div class="filters" role="group" aria-label="Filter holds">${opts.map(([k, l]) => `<button type="button" id="f-${k}" data-f="${k}" aria-pressed="${k === filter}">${l}</button>`).join('')}</div>
+    <div class="sleepers" id="sleepers">${sleeperCards(B)}</div>
+    ${B.holds.length > 4 ? `<button type="button" class="m-only more-btn" data-toggle="show-extra">Show all ${B.holds.length} holds</button>` : ''}
+  </section>`;
+}
+
+function goalies(B) {
+  return `<section>
+    <div class="sec-head"><h2>Goalies on the wire</h2></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Goalie</th><th class="n">Pts/start</th><th class="n">Start share</th><th class="n">Games</th><th class="n">Exp. pts</th></tr></thead>
+      <tbody>${B.goalies.map((g) => `<tr><td><b>${esc(g.name)}</b> <span class="pmeta">${g.team}${g.depth ? ' · G' + g.depth + ' on DailyFaceoff' : g.isStarter ? ' · starter' : ''}</span><div class="badges">${badges(g)}</div></td><td class="n">${f1(g.perStart)}</td><td class="n">${Math.round(g.share * 100)}%</td><td class="n">${g.gamesWk}</td><td class="n">${f1(g.proj * g.gamesWk)}</td></tr>`).join('')}</tbody>
+    </table></div>
+  </section>`;
+}
+
+function playoffs(B) {
+  const mineTeams = new Set(B.roster.map((p) => p.team));
+  return `<section>
+    <div class="sec-head"><h2>Playoff schedule</h2><span class="count">Mar 15–28</span></div>
+    <div class="scroll"><table>
+      <thead><tr><th>Team</th><th class="n">Games</th><th class="n">Light</th><th class="n">Wk 23</th><th>Score</th></tr></thead><!--po-->
+      <tbody>${B.playoffTeams.map((t, i) => `<tr class="${mineTeams.has(t.team) ? 'mine' : ''}${i >= 10 && !mineTeams.has(t.team) ? ' extra' : ''}"><td><b>${t.team}</b>${mineTeams.has(t.team) ? ' <span class="pmeta">yours</span>' : ''}</td><td class="n">${t.games}</td><td class="n">${t.offNights}</td><td class="n">${t.wk23 ?? '–'}</td><td><div style="display:flex;gap:8px;align-items:center"><div class="po-bar" style="flex:1"><i style="width:${t.score}%"></i></div><span class="mono">${f1(t.score)}</span></div></td></tr>`).join('')}</tbody>
+    </table></div>
+    <button type="button" class="m-only more-btn" data-toggle="show-extra">Show all 32 teams</button>
+  </section>`;
+}
+
+// ---- Trade market (engine/trades-core.js), shared by both tabs -----------------------------------
+/*__TRADESCORE__*/
+const tradeSel = {};
+function teamLine(pr) {
+  return [pr.holes.map((l) => l.text).join(', '), pr.strengths.map((l) => l.text).join(', '),
+    pr.catsWeak.join(', '), pr.catsStrong.join(', ')].filter(Boolean).join(' · ');
+}
+// your value and the market's, both labelled: "yours +4.50 · market +5.90" (over the wire)
+function twoVals(T, p, fmt) {
+  return `<span class="vals" title="Value over the wire: yours, and how other managers see him">yours <b>${fmt(T.vor(p))}</b> · market <b>${fmt(T.mvor(p))}</b></span>`;
+}
+function forYouCell(r, fmt) {
+  const f = r.forYou;
+  return [...f.stepIn.map((x) => `${esc(x)} takes his spot`),
+    f.pv >= 0.005 ? `better player (${fmt(f.pv)})` : '',
+    ...f.fills.map(esc),
+    f.starts ? '' : "depth: won't start for you yet"].filter(Boolean).join(' · ') || '–';
+}
+function tradeRows(key, T, fmt) {
+  const give = (T.rosters[T.me] || []).find((p) => p.id === tradeSel[key]);
+  const rows = T.shop([tradeSel[key]]).slice(0, 12);
+  const sellLow = give && T.heat(give) === 'cold' ? `<p class="small"><b>Sells low:</b> market ${fmt(T.mvor(give))} vs your ${fmt(T.vor(give))}.</p>` : '';
+  if (!rows.length) return sellLow + '<p class="muted small">No fair trade gets you a better player.</p>';
+  const why = rows[0].forYou.giveWhy;
+  return sellLow + (why.length ? `<p class="small"><b>Giving up ${esc(give.name)}:</b> ${why.map(esc).join(' · ')}</p>` : '') +
+    `<table class="mini stack trades"><thead><tr><th>#</th><th>Ask for</th><th>From</th><th>Why it works for you</th><th>Why they'd talk</th><th class="n">Your lineup</th><th class="n">Their view</th></tr></thead><tbody>${rows.map((r, i) => `<tr>
+    <td class="trade-rank">${i + 1}</td>
+    <td><b>${esc(r.player.name)}</b>${r.buyLow ? ` <span class="chip i-down" title="Yahoo rank ${r.buyLow.pre} preseason, ${r.buyLow.cur} now: slow start, frustrated owner">Buy low</span>` : ''} <span class="pmeta">${esc(r.player.team)} ${esc(r.player.pos.join('/'))}${r.player.injured ? ' · out' + (r.player.back ? ' to ' + short(r.player.back) : '') : ''}</span><div class="pmeta">${twoVals(T, r.player, fmt)}${r.buyLow ? ` · Yahoo rank ${r.buyLow.pre} → ${r.buyLow.cur}` : ''}</div>${r.flag ? `<div class="trade-flag">⚠ ${esc(r.flag.text)}</div>` : ''}</td>
+    <td>${esc(r.teamName)}</td>
+    <td class="small">${forYouCell(r, fmt)}</td>
+    <td class="small">${r.reasons.map(esc).join(' · ') || '–'}</td>
+    <td class="n">${fmt(r.you)}</td><td class="n">${fmt(r.them)}</td></tr>`).join('')}</tbody></table>`;
+}
+// the shop list: sell-high players first, then the rest, then the ones the market rates below you
+function shopOptions(key, T, fmt, mine) {
+  const by = (h) => mine.filter((p) => T.heat(p) === h);
+  const groups = [['Sell high', by('hot').sort((a, b) => T.hype(b) - T.hype(a))],
+    ['Fair value', by(null)],
+    ['Market rates below you (sells low)', by('cold')]];
+  return groups.filter(([, ps]) => ps.length).map(([label, ps]) => `<optgroup label="${esc(label)}">${ps.map((p) => `<option value="${p.id}"${p.id === tradeSel[key] ? ' selected' : ''}>${esc(p.name)} (${esc(p.pos.join('/'))}) yours ${fmt(T.vor(p))} · market ${fmt(T.mvor(p))}</option>`).join('')}</optgroup>`).join('');
+}
+// trade chips in one line per kind: who to sell high, who sits on your bench, where you have depth to spare
+function chipLine(T) {
+  const cs = T.chips(), nm = (c) => esc(c.p.name.split(' ').slice(1).join(' ') || c.p.name);
+  const hot = cs.filter((c) => c.sellHigh), bench = cs.filter((c) => !c.sellHigh && /bench/.test(c.why)), deep = cs.filter((c) => !c.sellHigh && !/bench/.test(c.why));
+  return [hot.length ? `<b>Sell high:</b> ${hot.map(nm).join(', ')}` : '',
+    bench.length ? `<b>Bench:</b> ${bench.map(nm).join(', ')}` : '',
+    deep.length ? `<b>Spare depth:</b> ${deep.map((c) => `${nm(c)} ${esc((c.why.match(/on (\w+)/) || [])[1] || c.p.pos[0])}`).join(', ')}` : ''].filter(Boolean).join(' · ');
+}
+// 2-for-1s: two of your players (never the never-drop list) for one better player, so injured players come back
+// without cutting anyone good. Teams that won't trade with you are left out (engine/trade-rules.json)
+function consolidateTable(T, fmt) {
+  if (!T.consolidate) return '';
+  const rows = T.consolidate({ limit: 8 });
+  const last = (p) => esc(p.name.split(' ').slice(1).join(' ') || p.name);
+  const cut = (ps) => (ps.length ? ps.map(last).join(', ') : 'nobody');
+  return `<h3 class="trade-sub">2-for-1 consolidation</h3>
+    <p class="unit">Two of yours for one better player: it frees a roster spot. <b>Likely</b> = chance they say yes, judged the way managers do: by name value (the second player counts a third), whether what they get would start for them, and whether their lineup gets worse. Today, with everyone back from injury, you'd cut: <b>${rows[0] ? cut(rows[0].cutBefore) : '–'}</b>.</p>
+    ${rows.length ? `<table class="mini stack trades"><thead><tr><th>#</th><th>You send</th><th>You get</th><th>From</th><th class="n">Likely</th><th class="n">Your lineup</th><th>Then you cut</th><th>Their side</th></tr></thead><tbody>${rows.map((r, i) => `<tr>
+      <td class="trade-rank">${i + 1}</td>
+      <td>${r.give.map((p) => `<b>${esc(p.name)}</b> <span class="pmeta">${esc(p.pos.join('/'))}</span>`).join('<br>')}</td>
+      <td><b>${esc(r.player.name)}</b> <span class="pmeta">${esc(r.player.team)} ${esc(r.player.pos.join('/'))}</span><div class="pmeta">${twoVals(T, r.player, fmt)}</div></td>
+      <td>${esc(r.teamName)}</td>
+      <td class="n"><b>${Math.round(r.likely * 100)}%</b></td>
+      <td class="n">${fmt(r.you)}<div class="pmeta">${fmt(r.youFull)} all back</div></td>
+      <td class="small">${cut(r.cutAfter)}</td>
+      <td class="small">${r.reasons.map(esc).join(' · ')}</td></tr>`).join('')}</tbody></table>` : '<p class="muted small">No 2-for-1 a willing team would take upgrades your lineup right now.</p>'}`;
+}
+// the league's biggest buy lows: your model's top 170 on other teams, furthest below that in Yahoo's current rank
+const FIT = { open: ['i-up', 'Open to moving him'], neutral: ['', 'Could go either way'], hesitant: ['i-down', 'Owner will be hesitant'] };
+// what one trade does: for you (player value, your lineup) and whether they'd see it as fair
+function swapText(T, fmt, gives, getId) {
+  const e = T.evalSwap(gives, getId);
+  if (!e) return '';
+  const win = e.gain >= -0.005 && e.you >= -0.02, loss = e.gain < -0.005 && e.you < 0.02;
+  return `<span class="chip ${win ? 'i-up' : loss ? 'i-down' : ''}">${win ? 'Win' : loss ? 'Loss' : 'Mixed'} for you</span>
+    player value <b>${fmt(e.gain)}</b> · your lineup <b>${fmt(e.you)}</b> · their view <b>${fmt(e.them)}</b> ${e.fair ? '(fair to them)' : '<span class="neg">(they\'d say no)</span>'}${e.goalieDiscount ? ` · goalie counted at ${Math.round(e.goalieDiscount * 100)}%` : ''}`;
+}
+function buyLowTable(key, T, fmt) {
+  const L = T.buyLows(170, 15);
+  if (!L.length) return '';
+  const mine = [...(T.rosters[T.me] || [])].filter((p) => !p.injured).sort((a, b) => T.vor(b) - T.vor(a));
+  const opts = (sel, none) => (none ? '<option value="">+ nobody</option>' : '') + mine.map((p) => `<option value="${p.id}"${p.id === sel ? ' selected' : ''}>${esc(p.name)} (${esc(p.pos.join('/'))}) ${fmt(T.vor(p))}</option>`).join('');
+  return `<h3 class="trade-sub">Biggest buy lows</h3>
+    <p class="unit">Your model's top 170 on other teams, ranked furthest below that by Yahoo right now (3+ games), owners most open to moving them first. <b>Your rank</b> = where your model has him among rostered players; <b>Yahoo now</b> = current rank (preseason). <b>Try a trade</b>: pick who you'd offer (best fair offer preselected).</p>
+    <table class="mini stack buylow"><thead><tr><th>Player</th><th>Owner</th><th class="n">Your rank</th><th class="n">Yahoo now</th><th>Try a trade</th></tr></thead><tbody>${L.map((b) => {
+      // preselect the best fair offer; with none, the fair-for-them player who costs you least, else the closest to fair
+      const first = b.offers[0]?.p.id ?? (() => {
+        const ev = mine.map((q) => ({ q, e: T.evalSwap([q.id], b.p.id) })).filter((x) => x.e);
+        const fair = ev.filter((x) => x.e.fair).sort((a, c) => c.e.gain + c.e.you - (a.e.gain + a.e.you));
+        return (fair[0] || ev.sort((a, c) => c.e.them - a.e.them)[0])?.q.id;
+      })();
+      return `<tr>
+      <td><b>${esc(b.p.name)}</b> <span class="pmeta">${esc(b.p.team)} ${esc(b.p.pos.join('/'))}</span><div class="pmeta">${twoVals(T, b.p, fmt)}</div></td>
+      <td><b>${esc(b.teamName)}</b><div><span class="chip ${FIT[b.fit][0]}">${FIT[b.fit][1]}</span></div><div class="small">${esc(b.why)}</div><div class="small"><b>Weakest:</b> ${esc(b.weakest.join(', ') || 'no clear holes')}</div></td>
+      <td class="n">#${b.yourRank}</td><td class="n">#${b.yahooCur}<div class="pmeta">(#${b.yahooPre ?? '–'})</div></td>
+      <td class="small"><div class="bl-pick"><select data-bl="${key}" data-get="${b.p.id}" data-i="0">${opts(first)}</select><select data-bl="${key}" data-get="${b.p.id}" data-i="1">${opts(null, true)}</select></div>
+        <div class="bl-out" id="bl-${key}-${b.p.id}">${swapText(T, fmt, [first], b.p.id)}</div></td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+// Points league: every team (yours too), in projected finish order, made to be screenshotted: no trade notes or names
+function needsTable(T) {
+  const all = T.ids.map((t) => T.profile(t)).sort((a, b) => (a.outlook?.finish ?? 99) - (b.outlook?.finish ?? 99));
+  const o = (pr) => pr.outlook || {};
+  return `<p class="unit"><b>Proj. finish</b> = record so far plus the rest of the regular season played out at each lineup's strength. Strengths and holes rank each team's starters against all ${T.ids.length} teams.</p>
+    <table class="mini stack"><thead><tr><th>Team</th><th class="n">Proj. finish</th><th>Strengths</th><th>Holes</th><th>What the model thinks</th></tr></thead><tbody>${all.map((pr) => `<tr${pr.id === T.me ? ' class="mine"' : ''}>
+      <td><b>${esc(pr.name)}</b></td>
+      <td class="n"><b>${o(pr).finish ? ord(o(pr).finish) : '–'}</b></td>
+      <td class="small">${esc(pr.strengths.map((l) => cap(l.text)).join(' · ') || '–')}</td>
+      <td class="small">${esc(pr.holes.map((l) => cap(l.text)).join(' · ') || '–')}</td>
+      <td class="small">${esc(o(pr).verdict || '–')}</td></tr>`).join('')}</tbody></table>`;
+}
+const ord = (k) => k + (k % 10 === 1 && k !== 11 ? 'st' : k % 10 === 2 && k !== 12 ? 'nd' : k % 10 === 3 && k !== 13 ? 'rd' : 'th');
+// key: 'points' | 'cats'; fmt formats a value in the league's units
+function tradeMarket(key, T, fmt, unit, unitNote) {
+  const chips = T.chips();
+  const mine = [...(T.rosters[T.me] || [])].filter((p) => !p.injured).sort((a, b) => T.vor(b) - T.vor(a));
+  if (!mine.length) return '';
+  if (!mine.some((p) => p.id === tradeSel[key])) tradeSel[key] = chips[0]?.p.id ?? mine[0].id;
+  const me = T.profile(T.me);
+  const others = T.ids.filter((t) => t !== T.me).map((t) => T.profile(t)).sort((a, b) => b.holes.length - a.holes.length);
+  const cl = chipLine(T);
+  return `<section id="trade-${key}">
+    <div class="sec-head"><h2>Trade market</h2><span class="count">${esc(unit)} over the wire</span></div>${unitNote ? `<p class="unit">${unitNote} <b>Yours</b> = your sheet + current role; <b>market</b> = Yahoo rank + age. <b>Your lineup</b> = change to your best lineup; <b>their view</b> = market value they gain.</p>` : ''}
+    <p class="trade-me"><b>You:</b> ${esc(teamLine(me) || 'no clear holes or strengths')}</p>
+    ${cl ? `<p class="small">${cl}</p>` : ''}
+    <label class="trade-pick">Shop a player: <select data-trade="${key}">${shopOptions(key, T, fmt, mine)}</select></label>
+    <div id="trade-${key}-rows">${tradeRows(key, T, fmt)}</div>
+    ${consolidateTable(T, fmt)}
+    ${buyLowTable(key, T, fmt)}
+    ${T.rankNeeds ? '' : `<details open style="margin-top:12px"><summary>Every team: needs and what they'd trade</summary>
+      <table class="mini stack"><thead><tr><th>Team</th><th>Most open to</th><th>Holes</th><th>Strengths</th><th>Bench</th></tr></thead><tbody>${others.map((pr) => `<tr>
+        <td><b>${esc(pr.name)}</b>${T.rules?.notes?.[pr.name] ? `<div class="small">${esc(T.rules.notes[pr.name])}</div>` : ''}</td>
+        <td><b>${esc(pr.openTo)}</b></td>
+        <td class="small">${esc([...pr.holes.map((l) => cap(l.text)), ...pr.catsWeak].join(' · ') || '–')}</td>
+        <td class="small">${esc([...pr.strengths.map((l) => cap(l.text)), ...pr.catsStrong].join(' · ') || '–')}</td>
+        <td class="small">${esc(pr.bench.map((p) => `${p.name} ${p.pos.join('/')}`).join(', ') || '–')}</td></tr>`).join('')}</tbody></table>
+    </details>`}
+  </section>`;
+}
+// the team table on its own, at the top of each tab
+function modelThinks(T) {
+  return T?.rankNeeds ? `<section id="model-thinks"><div class="sec-head"><h2>What the model thinks</h2><span class="count">every team, by projected finish</span></div>${needsTable(T)}</section>` : '';
+}
+function bindTrades(root, key, T, fmt) {
+  root.querySelectorAll(`[data-trade="${key}"]`).forEach((s) => s.addEventListener('change', () => {
+    tradeSel[key] = Number(s.value);
+    root.querySelector(`#trade-${key}-rows`).innerHTML = tradeRows(key, T, fmt);
+    labelStacks();
+  }));
+  // buy-low trade tester: re-evaluate when either offered player changes
+  root.querySelectorAll(`[data-bl="${key}"]`).forEach((s) => s.addEventListener('change', () => {
+    const get = Number(s.dataset.get);
+    const gives = [...root.querySelectorAll(`[data-bl="${key}"][data-get="${get}"]`)].map((x) => Number(x.value)).filter(Boolean);
+    root.querySelector(`#bl-${key}-${get}`).innerHTML = swapText(T, fmt, [...new Set(gives)], get);
+  }));
+}
+function buildPointsT(B) {
+  // Points league: goalies are volatile, so one you'd acquire counts at 70% of his value
+  pointsT = B.tradeData && typeof TradesCore !== 'undefined' ? TradesCore.build({ ...B.tradeData, repl: B.model.replacement, goalieTradeDiscount: 0.7 }) : null;
+  return pointsT;
+}
+function pointsTrades(B) {
+  if (!pointsT) return '';
+  return tradeMarket('points', pointsT, ptsFmt, 'fantasy points per game', 'Value: fantasy pts/gm above the 3rd–6th best free agent at his position.');
+}
+let pointsT = null;
+const ptsFmt = (x) => `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(2)}`;
+
+// the trade-market lines of the Key, shared by both tabs
+function tradeKey() {
+  return `<li><b>Trades: yours / market</b>: yours = your sheet adjusted for his current role, not hot or cold results. Market = how managers see him: Yahoo's preseason rank (name value) blended with its current rank as games pile up, plus a premium for 23 and under and a discount from 33. Both over the wire.</li>
+      <li><b>Your lineup / their view</b>: change in your best lineup's value; market value they gain (+ = they think they win). A return is listed only if you get the better player (a slight loss that fills a weak spot is flagged ⚠), it's fair for them and it fills a need of theirs. Ranked by how likely they deal plus how much you gain.</li>
+      <li><b>Buy low</b> (red): a target off to a slow start. Yahoo current rank at least double his preseason rank and 50+ places worse after 3+ games. His owner is likeliest to sell, so these rank higher.</li>
+      <li><b>You: weak / strong on X (9th of 14)</b>: rank of your starters at that position by your values. <b>Other teams: short / spare at X (1½ in Yahoo's top 91)</b>: how many of their healthy players at X Yahoo ranks inside the league's starting pool (better of this season and preseason; dual-position players count part to each). Short = fewer than the starting slots (they need one), spare = at least one more (they can trade one, and won't take another).</li>
+      <li><b>Likely</b>: chance they say yes = need × spare × value × lineup. Need: what they get starts for them. Spare: what they give sits on their bench or has a real backup. Value: name value (Yahoo ranks, a premium for preseason top 10/25/50), in a 2-for-1 the second player counts a third. Lineup: a trade that weakens their lineup by their own rankings is close to a no. Teams that won't trade with you are never listed.</li>`;
+}
+function method(B) {
+  const m = B.model, n = B.dataNotes, r = m.replacement;
+  return `<section class="notes"><details class="wide-open notes-d"><summary><h2 style="display:inline">Key</h2></summary><ul class="key">
+    <li><b>Pts/gm (8.6)</b>: projected fantasy points per game: your sheet, adjusted for current ice time, PP unit, linemates and opponent. This season's stats then blend in: your projection counts as 50 games and each game played adds one (5 GP = 91% projection, 9% results).</li>
+    <li><b>Over the wire (+1.2)</b>: pts/gm above the 3rd–6th best free agent at his position (C ${r.C}, LW ${r.LW}, RW ${r.RW}, D ${r.D}).</li>
+    <li><b>Stud / Strong / Starter / Depth</b>: top 42 / 84 / 140 skaters (8 / 18 / 28 goalies) by value over the wire. <b>Keep</b> = 1+ pt/gm over the wire.</li>
+    <li><b>Move value (+12.3 pts)</b>: this week's gain × matchup weight (points past a likely win count less) + rest-of-season gain from a full-season lineup simulation (playoff weeks ×${m.PLAYOFF_WEEK_WEIGHT}). Moves under ${m.MIN_MOVE_GAIN} pts are skipped; studs, strong players, positional starters and PP1 top-6 F / top-4 D are never dropped.</li>
+    <li><b>Goalie minimum</b>: under 3 starts wipes every goalie point that week. <b>Win chance</b>: weekly margins vary ±${m.MARGIN_SD} pts.</li>
+    <li><b>Hold score (0–100)</b>: quality 45%, role 30%, growth 25%, ±8 for news. Growth is room to improve this season: highest in the breakout window (forwards 21–23, D 23–25), lower for players still learning the league, fading past it; goalies: younger is more upside.</li>
+    <li><b>Intel</b>: green helps him, red hurts. "News, not yet in the projection" moves the hold score only. <b>Playoff score</b>: games 75%, light nights 25%, weeks 24–25.</li>
+    ${tradeKey()}
+    <li><b>Data</b>: NHL ${new Date(n.nhlData).toLocaleString()} · Yahoo rosters ${new Date(n.yahooSnapshot).toLocaleString()}${n.dfo ? ` · DailyFaceoff ${new Date(n.dfo).toLocaleString()}` : ''}${n.espn ? ` · ESPN ${new Date(n.espn).toLocaleString()}` : ''}. <a href="https://sports.yahoo.com/fantasy/" target="_blank" rel="noopener">Fantasy data provided by Yahoo Fantasy</a>.</li>
+  </ul></details></section>`;
+}
+
+function labelStacks() {
+  document.querySelectorAll('table.stack').forEach((t) => {
+    const hs = [...t.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    t.querySelectorAll('tbody tr').forEach((tr) => [...tr.children].forEach((td, i) => { if (i > 0 && hs[i]) td.dataset.l = hs[i]; }));
+  });
+}
+function render() {
+  const B = BOARD;
+  buildPointsT(B);
+  $('#app').innerHTML = header(B) + modelThinks(pointsT) + decision(B) + alarm(B) + insightsStrip(B) + moves(B) + intelSection(B) + matchup(B) + sleepers(B) + pointsTrades(B) + pickups(B) + `<div class="two">${goalies(B)}${playoffs(B)}</div>` + injurySection(B) + method(B);
+  if (pointsT) bindTrades($('#app'), 'points', pointsT, ptsFmt);
+  document.querySelectorAll('[data-f]').forEach((b) => b.addEventListener('click', () => {
+    filter = b.dataset.f;
+    document.querySelectorAll('[data-f]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.f === filter)));
+    $('#sleepers').innerHTML = sleeperCards(B);
+  }));
+  document.querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => {
+    intelFilter = b.dataset.i;
+    document.querySelectorAll('[data-i]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.i === intelFilter)));
+    $('#intel').innerHTML = intelCards(B);
+  }));
+  document.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => {
+    gridMode = b.dataset.g;
+    document.querySelectorAll('[data-g]').forEach((x) => x.setAttribute('aria-pressed', String(x.dataset.g === gridMode)));
+    const gs = gridMode === 'after' ? B.goalieStarts.after : B.goalieStarts.before;
+    $('#gline').className = 'gline ' + (gs.pMin < 0.85 ? 'warn' : '');
+    $('#gline').innerHTML = `Goalie starts: <b>${f1(gs.expected)}</b> expected, <b>${Math.round(gs.pMin * 100)}%</b> chance of reaching the ${gs.min}-start minimum${gs.gLost >= 0.5 ? ` (${f1(gs.gLost)} goalie pts expected lost to it)` : ''}`;
+    $('#gridwrap').innerHTML = gridTable(B);
+  }));
+  labelStacks();
+  if (typeof matchMedia === 'function' && matchMedia('(min-width: 641px)').matches) $('#app').querySelectorAll('details.wide-open').forEach((d) => (d.open = true));
+  $('#app').querySelectorAll('[data-toggle]').forEach((b) => b.addEventListener('click', () => {
+    const sec = b.closest('section'), cls = b.dataset.toggle;
+    sec.classList.toggle(cls);
+    b.textContent = sec.classList.contains(cls) ? 'Show fewer' : b.dataset.label || b.textContent;
+  }));
+  $('#app').querySelectorAll('[data-toggle]').forEach((b) => (b.dataset.label = b.textContent));
+}
+window.renderPoints = render;
+</script>
+<script>
+/*__CATSUI__*/
+</script>
+<script>
+// boot: newest saved board first (when the shared worker is reachable), then both tabs. Only the owner refreshes
+// it (node refresh.mjs + finish.mjs, Sunday and Wednesday nights): there is no Refresh button
+(() => {
+  const tabs = document.querySelectorAll('[data-tab]');
+  let catsDrawn = false, current = 'points';
+  const show = (t) => {
+    if (t === 'cats' && typeof window.renderCats !== 'function') t = 'points';
+    current = t;
+    tabs.forEach((b) => b.setAttribute('aria-selected', String(b.dataset.tab === t)));
+    document.getElementById('app').hidden = t !== 'points';
+    document.getElementById('app-cats').hidden = t !== 'cats';
+    if (t === 'cats' && !catsDrawn) { window.renderCats(); catsDrawn = true; }
+    try { localStorage.setItem('board-tab', t); } catch { /* private window */ }
+  };
+  tabs.forEach((b) => b.addEventListener('click', () => { show(b.dataset.tab); window.scrollTo(0, 0); }));
+  const status = (t) => { document.getElementById('refresh-status').textContent = t; };
+  const when = (iso) => new Date(iso).toLocaleString('en-US', { weekday: 'short', hour: 'numeric', minute: '2-digit' });
+  const draw = () => {
+    window.renderPoints();
+    if (window.CATS_DATA && typeof window.initCats === 'function') window.initCats(window.CATS_DATA);
+    document.getElementById('tab-cats').hidden = typeof window.renderCats !== 'function';
+    catsDrawn = false;
+    show(current);
+  };
+  const stamp = () => {
+    const r = BOARD.refresh, y = BOARD.dataNotes?.yahooSnapshot;
+    const yahooStale = r?.warnings?.some((w) => /^Yahoo/.test(w));
+    const other = (r?.warnings || []).filter((w) => !/^Yahoo/.test(w)).length;
+    status(`Only the owner can refresh this board: Sunday and Wednesday nights. Last updated ${when(r ? r.at : BOARD.generatedAt)}${yahooStale && y ? ' · Yahoo rosters as of ' + when(y) : ''}${other ? ` · ${other} source${other > 1 ? 's' : ''} kept from before` : ''}`);
+  };
+  async function boot() {
+    let live = false;
+    if (WEB) {
+      try {
+        const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), 5000);
+        const r = await fetch(WEB.api + '/latest', { signal: ctl.signal, cache: 'no-store' }); clearTimeout(tm);
+        live = true;
+        if (r.ok) {
+          const j = await r.json();
+          const at = (x) => (x?.refresh?.at || x?.generatedAt || '');
+          if (j.board && at(j.board) > at(BOARD)) { BOARD = j.board; if (j.cats) window.CATS_DATA = j.cats; }
+        }
+      } catch { live = false; }
+    }
+    try { current = location.hash === '#cats' ? 'cats' : localStorage.getItem('board-tab') || 'points'; } catch { /* storage blocked */ }
+    draw();
+    stamp();
+    // no Refresh button: the owner refreshes the board (Sunday and Wednesday nights). Inside claude.ai, link to the shared board
+    const link = document.getElementById('open-live');
+    if (WEB && WEB.live && location.origin !== new URL(WEB.base).origin) { link.href = WEB.live; link.hidden = false; }
+  }
+  boot();
+})();
+</script>

@@ -1,0 +1,20 @@
+secrets/
+node_modules/
+nhl/cache/
+*.log
+web/dist/
+web/.wrangler/
+web/config.json
+.wrangler/
+out/
+nhl/out/
+review/
+Claude outputs/
+*.pdf
+*.xlsx
+*.xlsm
+# your league data, orders and logs stay local
+yahoo/data/
+moves/orders/
+moves/log.jsonl
+projections/*.json

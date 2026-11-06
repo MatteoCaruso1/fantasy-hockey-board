@@ -1,0 +1,10 @@
+{
+  "name": "fantasy-hockey-web",
+  "private": true,
+  "type": "module",
+  "description": "Shared fantasy hockey board: Cloudflare worker + browser build of the pipeline",
+  "devDependencies": {
+    "esbuild": "0.25.10",
+    "wrangler": "4.148.0"
+  }
+}

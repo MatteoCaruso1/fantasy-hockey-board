@@ -1,0 +1,5 @@
+{
+  "_rule": "Trade market rules per league. blocked = team names that won't trade with you (as Yahoo shows them); keep = your players never offered; notes = notes shown next to a team; noGoalieReturns = never suggest trading for a goalie.",
+  "points": { "noGoalieReturns": true, "blocked": [], "keep": [], "notes": {} },
+  "cats": { "noGoalieReturns": true, "blocked": [], "keep": [], "notes": {} }
+}

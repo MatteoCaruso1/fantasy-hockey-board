@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>My Team Auto Moves</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Auto moves: queue Yahoo add/drops that the board's worker makes for you (worker.js + moves.js). */
+:root {
+  --ice: #F2F5F9; --sheet: #FFFFFF; --ink: #0E1B2B; --muted: #5A6A7D; --line: #D5DDE7;
+  --blue: #1F4FA3; --blue-soft: #E5EDF9; --red: #C8102E; --red-soft: #FBE5E8;
+  --good: #1B7A52; --good-soft: #E2F3EA; --warn: #A86200; --warn-soft: #FBF0DC;
+  --display: "Saira Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --ice: #0A1119; --sheet: #111B27; --ink: #E5ECF4; --muted: #91A2B5; --line: #233244;
+  --blue: #79A4F0; --blue-soft: #15243A; --red: #FF5C70; --red-soft: #3A1620;
+  --good: #4CC48A; --good-soft: #10291E; --warn: #E7A640; --warn-soft: #2D2210; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --ice: #0A1119; --sheet: #111B27; --ink: #E5ECF4; --muted: #91A2B5; --line: #233244;
+  --blue: #79A4F0; --blue-soft: #15243A; --red: #FF5C70; --red-soft: #3A1620;
+  --good: #4CC48A; --good-soft: #10291E; --warn: #E7A640; --warn-soft: #2D2210; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ice); color: var(--ink); font: 16px/1.45 var(--body); }
+main { max-width: 760px; margin: 0 auto; padding: 20px 16px 48px; }
+h1, h2 { font-family: var(--display); font-weight: 700; margin: 0; line-height: 1.05; }
+h1 { font-size: 34px; }
+h2 { font-size: 22px; margin-bottom: 10px; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+.top a { color: var(--blue); font-size: 14px; }
+.card { background: var(--sheet); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+.muted { color: var(--muted); font-size: 14px; }
+.note { border-radius: 8px; padding: 10px 12px; font-size: 15px; margin: 10px 0 0; }
+.note.warn { background: var(--warn-soft); color: var(--warn); }
+.note.good { background: var(--good-soft); color: var(--good); }
+.note.bad { background: var(--red-soft); color: var(--red); }
+button, select, input { font: inherit; color: inherit; }
+button { background: var(--blue); color: var(--sheet); border: 0; border-radius: 8px; padding: 9px 14px; font-weight: 600; cursor: pointer; }
+button.ghost { background: transparent; color: var(--blue); border: 1px solid var(--line); }
+button:disabled { opacity: .5; cursor: default; }
+select, input[type=text], input[type=datetime-local] { width: 100%; background: var(--ice); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; }
+label.field { display: block; font-weight: 600; font-size: 14px; margin: 12px 0 4px; }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.row > input { flex: 1 1 180px; }
+.steps { margin: 8px 0 0; padding-left: 20px; }
+.steps li { margin-bottom: 8px; }
+.results { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.results li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--line); cursor: pointer; }
+.results li:first-child { border-top: 0; }
+.results li:hover, .results li.on { background: var(--blue-soft); }
+.results li.taken { cursor: default; opacity: .55; }
+.pill { font-family: var(--mono); font-size: 12px; border-radius: 99px; padding: 2px 8px; white-space: nowrap; align-self: center; }
+.pill.fa, .pill.done { background: var(--good-soft); color: var(--good); }
+.pill.w, .pill.queued, .pill.running { background: var(--warn-soft); color: var(--warn); }
+.pill.t, .pill.failed { background: var(--red-soft); color: var(--red); }
+.pill.cancelled { background: var(--ice); color: var(--muted); }
+.radio { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0; }
+.radio input { margin-top: 4px; }
+.move { border-top: 1px solid var(--line); padding: 12px 0; display: flex; gap: 12px; justify-content: space-between; }
+.move:first-of-type { border-top: 0; }
+.move b { font-weight: 700; }
+.err { color: var(--red); font-size: 14px; margin-top: 8px; min-height: 1em; }
+.hidden { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><h1>Auto moves</h1><a href="/">Back to the board</a></div>
+
+  <section class="card hidden" id="nokey">
+    <h2>Private page</h2>
+    <p>Open this page from your private auto moves link. It saves itself on this device after that.</p>
+  </section>
+
+  <section class="card hidden" id="yahoo">
+    <h2>Yahoo</h2>
+    <div id="ystate"></div>
+    <div id="connect" class="hidden">
+      <ol class="steps">
+        <li><button id="open">Open Yahoo</button> <span class="muted">opens in a new tab</span></li>
+        <li>Tick the box, click <b>Next</b> (or Agree). Yahoo shows a short code.</li>
+        <li>Copy the code, paste it here and save.
+          <div class="row" style="margin-top:6px"><input type="text" id="code" placeholder="Code from Yahoo" autocomplete="off"><button id="save">Save</button></div>
+        </li>
+      </ol>
+    </div>
+    <div class="err" id="yerr"></div>
+  </section>
+
+  <section class="card hidden" id="new">
+    <h2>Queue a move</h2>
+    <label class="field" for="team">Team</label>
+    <select id="team"></select>
+    <label class="field" for="q">Add</label>
+    <div class="row"><input type="text" id="q" placeholder="Player name" autocomplete="off"><button class="ghost" id="find">Search</button></div>
+    <ul class="results hidden" id="results"></ul>
+    <label class="field" for="drop">Drop</label>
+    <select id="drop"><option value="">Nobody (only if you have an open spot)</option></select>
+    <label class="field">When</label>
+    <label class="radio"><input type="radio" name="when" value="when_available" checked><span>As soon as he is a free agent<br><span class="muted">Checks every minute (every 15 minutes before his waiver day), for up to 7 days.</span></span></label>
+    <label class="radio"><input type="radio" name="when" value="at_time"><span>At a set time<br><span class="muted">If he is on waivers or taken at that time, nothing happens.</span></span></label>
+    <input type="datetime-local" id="at" class="hidden">
+    <div class="row" style="margin-top:14px"><button id="queue">Queue move</button></div>
+    <div class="err" id="nerr"></div>
+  </section>
+
+  <section class="card hidden" id="list">
+    <h2>Moves</h2>
+    <div id="moves"></div>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  let key = null;
+  try {
+    const fromHash = new URLSearchParams(location.hash.slice(1)).get('k');
+    if (fromHash) { localStorage.setItem('movesKey', fromHash); history.replaceState(null, '', location.pathname); }
+    key = fromHash || localStorage.getItem('movesKey');
+  } catch { key = new URLSearchParams(location.hash.slice(1)).get('k'); }
+  if (!key) { $('nokey').classList.remove('hidden'); return; }
+
+  async function api(path, body) {
+    const r = await fetch('/api/moves/' + path, { method: body ? 'POST' : 'GET', headers: { 'x-moves-key': key, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+    const d = await r.json().catch(() => ({ error: 'No answer from the server.' }));
+    if (r.status === 403 && /private/.test(d.error || '')) { try { localStorage.removeItem('movesKey'); } catch {} }
+    if (!r.ok) throw new Error(d.error || 'Something went wrong.');
+    return d;
+  }
+
+  let state = null, picked = null, rosterTeam = null, connectOpen = false;
+  const when = (iso) => iso ? new Date(iso).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  const STATUS = { queued: 'waiting', running: 'running', done: 'done', failed: 'not made', cancelled: 'cancelled' };
+
+  function render(s) {
+    state = s;
+    $('yahoo').classList.remove('hidden');
+    const notes = [];
+    if (!s.connected) notes.push('<p>Not connected yet. Connect once; the login is kept on the server and renews itself.</p>');
+    else notes.push(`<p>Connected ${s.connectedAt ? 'since ' + esc(when(s.connectedAt)) : ''} with <b>${s.canMove ? 'permission to make moves' : 'read-only access'}</b>. <button class="ghost" id="again">Connect again</button></p>`);
+    if (!s.writeGranted) notes.push('<p class="note warn">Yahoo has not turned on write access for this app yet. You can queue moves now; they wait until it is on.</p>');
+    else if (s.connected && !s.canMove) notes.push('<p class="note warn">Yahoo has turned on write access. Connect again so moves can go through.</p>');
+    else if (s.canMove) notes.push('<p class="note good">Ready: queued moves are made automatically.</p>');
+    $('ystate').innerHTML = notes.join('');
+    $('connect').classList.toggle('hidden', s.connected && !(s.writeGranted && !s.canMove) && !connectOpen);
+    $('again')?.addEventListener('click', () => { connectOpen = true; $('connect').classList.remove('hidden'); });
+
+    const teams = s.teams || [];
+    $('new').classList.toggle('hidden', !s.connected || !teams.length);
+    const cur = $('team').value;
+    $('team').innerHTML = teams.map((t) => `<option value="${esc(t.team_key)}">${esc(t.name)} (${esc(t.league)})</option>`).join('');
+    if (cur && teams.some((t) => t.team_key === cur)) $('team').value = cur;
+    if ($('team').value && $('team').value !== rosterTeam) loadRoster();
+
+    $('list').classList.toggle('hidden', !s.moves.length);
+    $('moves').innerHTML = s.moves.map((m) => {
+      const team = teams.find((t) => t.team_key === m.team_key);
+      const what = `Add <b>${esc(m.add_player_name || m.add_player_key)}</b>${m.drop_player_key ? `, drop <b>${esc(m.drop_player_name || m.drop_player_key)}</b>` : ''}`;
+      const timing = m.trigger_type === 'at_time' ? `at ${esc(when(m.run_at))}` : 'as soon as he is a free agent';
+      const last = m.last_checked_at ? ` · last checked ${esc(when(m.last_checked_at))}` : '';
+      return `<div class="move"><div><div>${what}</div><div class="muted">${esc(team ? team.name : m.team_key)} · ${timing}${last}</div>
+        <div class="muted">${esc(m.reason || '')}</div></div>
+        <div style="text-align:right"><span class="pill ${m.status}">${STATUS[m.status] || m.status}</span>
+        ${m.status === 'queued' ? `<div style="margin-top:8px"><button class="ghost" data-cancel="${esc(m.id)}">Cancel</button></div>` : ''}</div></div>`;
+    }).join('');
+  }
+
+  async function refresh() {
+    try { render(await api('status')); } catch (e) { $('yahoo').classList.remove('hidden'); $('yerr').textContent = e.message; }
+  }
+
+  async function loadRoster() {
+    rosterTeam = $('team').value;
+    $('drop').innerHTML = '<option value="">Loading roster…</option>';
+    try {
+      const r = await api('roster?team=' + encodeURIComponent(rosterTeam));
+      const order = (p) => (/IR|NA/.test(p.selected_position || '') ? 2 : p.selected_position === 'BN' ? 1 : 0);
+      $('drop').innerHTML = '<option value="">Nobody (only if you have an open spot)</option>' + r.players.slice().sort((a, b) => order(a) - order(b))
+        .map((p) => `<option value="${esc(p.player_key)}">${esc(p.name)} · ${esc(p.pos)} ${esc(p.team)}${p.selected_position ? ' · ' + esc(p.selected_position) : ''}</option>`).join('');
+    } catch (e) { $('drop').innerHTML = '<option value="">Nobody</option>'; $('nerr').textContent = e.message; }
+  }
+
+  const ownLabel = (o) => !o ? ['?', ''] : o.ownership_type === 'freeagents' ? ['free agent', 'fa'] : o.ownership_type === 'waivers' ? [`waivers${o.waiver_date ? ' until ' + o.waiver_date : ''}`, 'w'] : o.ownership_type === 'team' ? [o.owner_team_name || 'taken', 't'] : ['?', ''];
+
+  async function search() {
+    $('nerr').textContent = '';
+    picked = null;
+    const ul = $('results');
+    ul.classList.remove('hidden');
+    ul.innerHTML = '<li class="muted">Searching…</li>';
+    try {
+      const r = await api(`search?team=${encodeURIComponent($('team').value)}&q=${encodeURIComponent($('q').value.trim())}`);
+      if (!r.players.length) { ul.innerHTML = '<li class="muted">No players found.</li>'; return; }
+      ul.innerHTML = r.players.map((p, i) => {
+        const [txt, cls] = ownLabel(p.ownership);
+        return `<li data-i="${i}" class="${cls === 't' ? 'taken' : ''}"><span>${esc(p.name)} <span class="muted">${esc(p.pos)} ${esc(p.team)}</span></span><span class="pill ${cls}">${esc(txt)}</span></li>`;
+      }).join('');
+      ul.querySelectorAll('li[data-i]').forEach((li) => li.addEventListener('click', () => {
+        const p = r.players[+li.dataset.i];
+        if (p.ownership?.ownership_type === 'team') return;
+        picked = p;
+        ul.querySelectorAll('li').forEach((x) => x.classList.toggle('on', x === li));
+      }));
+    } catch (e) { ul.innerHTML = ''; ul.classList.add('hidden'); $('nerr').textContent = e.message; }
+  }
+
+  $('open').addEventListener('click', async () => {
+    $('yerr').textContent = '';
+    const w = window.open('', '_blank');
+    try { const r = await api('connect-url'); if (w) w.location = r.url; else location.href = r.url; }
+    catch (e) { w?.close(); $('yerr').textContent = e.message; }
+  });
+  $('save').addEventListener('click', async () => {
+    $('yerr').textContent = '';
+    $('save').disabled = true;
+    try { const r = await api('connect', { code: $('code').value.trim() }); connectOpen = false; $('code').value = ''; render(r); }
+    catch (e) { $('yerr').textContent = e.message; }
+    $('save').disabled = false;
+  });
+  $('team').addEventListener('change', () => { picked = null; $('results').classList.add('hidden'); loadRoster(); });
+  $('find').addEventListener('click', search);
+  $('q').addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+  document.querySelectorAll('input[name=when]').forEach((r) => r.addEventListener('change', () => $('at').classList.toggle('hidden', r.value !== 'at_time' || !r.checked)));
+  $('queue').addEventListener('click', async () => {
+    $('nerr').textContent = '';
+    if (!picked) { $('nerr').textContent = 'Search for a player and pick him first.'; return; }
+    const trigger = document.querySelector('input[name=when]:checked').value;
+    const dropSel = $('drop').selectedOptions[0];
+    const body = {
+      team_key: $('team').value, add_player_key: picked.player_key, add_player_name: picked.name,
+      drop_player_key: $('drop').value || null, drop_player_name: $('drop').value ? dropSel.textContent.split(' · ')[0] : null, trigger_type: trigger,
+    };
+    if (trigger === 'at_time') {
+      if (!$('at').value) { $('nerr').textContent = 'Pick a date and time.'; return; }
+      body.run_at = new Date($('at').value).toISOString();
+    }
+    $('queue').disabled = true;
+    try {
+      const r = await api('create', body);
+      state.moves = r.moves;
+      render(state);
+      picked = null; $('q').value = ''; $('results').classList.add('hidden'); $('drop').value = '';
+    } catch (e) { $('nerr').textContent = e.message; }
+    $('queue').disabled = false;
+  });
+  $('moves').addEventListener('click', async (e) => {
+    const id = e.target.closest('[data-cancel]')?.dataset.cancel;
+    if (!id) return;
+    try { const r = await api('cancel', { id }); state.moves = r.moves; render(state); } catch (err) { alert(err.message); }
+  });
+
+  refresh();
+  setInterval(() => { if (!document.hidden) refresh(); }, 30000);
+})();
+</script>
+</body>
+</html>

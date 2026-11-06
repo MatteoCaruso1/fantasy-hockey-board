@@ -2,7 +2,7 @@
 
 A weekly decision board for Yahoo fantasy hockey, covering a **points league** and a **head-to-head categories league**. It pulls live data from the NHL and Yahoo, scores every player against your own projections, and turns that into the week's moves: who to start each night, who to add and drop, which trades the other managers would actually accept, and where you're projected to finish.
 
-Shared with co-managers as a single web page on a free Cloudflare Worker, which also runs queued add/drops through Yahoo's API on a timer.
+Shared with co-managers as a single web page on a free Cloudflare Worker.
 
 ## What the board does
 
@@ -22,7 +22,7 @@ Shared with co-managers as a single web page on a free Cloudflare Worker, which 
 | `projections/` | Exports your projections spreadsheet to JSON (`export_ag.py` points, `export_cats.py` categories) |
 | `engine/` | The model: `analyze.mjs` (points), `cats.mjs` + `cats-core.js` (categories), `trades-core.js`, `outlook.mjs` |
 | `page/` | The board: one self-contained HTML page with the data inlined |
-| `web/` | Cloudflare Worker: serves the shared board (KV), re-runs the pipeline in the browser, and an auto-moves queue (D1 + cron) that sends Yahoo add/drop transactions when a player clears waivers or at a set time |
+| `web/` | Cloudflare Worker: serves the shared board (KV) and re-runs the pipeline in the browser |
 
 Plain Node.js (ES modules) with no framework; the worker is built with esbuild and deployed with Wrangler.
 

@@ -287,6 +287,14 @@ export async function runMoves(env, now = new Date()) {
   return summary;
 }
 
+// Swap the characters HTML needs (< > " `) for look-alikes in every saved string.
+function defang(v) {
+  if (typeof v === 'string') return v.replace(/</g, '‹').replace(/>/g, '›').replace(/"/g, '”').replace(/`/g, "'");
+  if (Array.isArray(v)) return v.map(defang);
+  if (v && typeof v === 'object') { const o = {}; for (const k of Object.keys(v)) o[defang(k)] = defang(v[k]); return o; }
+  return v;
+}
+
 export default {
   async fetch(req, env) {
     const url = new URL(req.url);
@@ -297,7 +305,12 @@ export default {
         if (req.headers.get('x-board-key') !== env.WRITE_KEY) return json({ error: 'bad key' }, 403);
         const body = await req.text();
         if (body.length > 20e6 || !body.startsWith('{')) return json({ error: 'bad body' }, 400);
-        await env.BOARD.put('latest', body);
+        let data;
+        try { data = JSON.parse(body); } catch { return json({ error: 'bad body' }, 400); }
+        if (!data || typeof data !== 'object' || !data.board) return json({ error: 'bad body' }, 400);
+        // Anyone with the board link can save a refresh, so saved text must never be able to
+        // become HTML or script on this site (the /moves page lives here too).
+        await env.BOARD.put('latest', JSON.stringify(defang(data)));
         return json({ ok: true });
       }
       const v = await env.BOARD.get('latest', 'stream');
